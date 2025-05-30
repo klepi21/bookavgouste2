@@ -42,6 +42,7 @@ export default function UserBookingPage() {
   const [mounted, setMounted] = useState(false);
   const [animatedIdx, setAnimatedIdx] = useState<number | null>(null);
   const bounceTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [confirmationModal, setConfirmationModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -99,7 +100,8 @@ export default function UserBookingPage() {
         setTimeout(() => {
           setShowModal(false);
           setMessage(null);
-        }, 2000);
+          setConfirmationModal(true);
+        }, 1200);
       } else {
         setMessage(data.error || 'Σφάλμα κατά την αποθήκευση της κράτησης.');
       }
@@ -230,7 +232,7 @@ export default function UserBookingPage() {
           minHeight: '100vh',
           position: 'relative',
         }}
-        className="flex flex-col items-center justify-center min-h-screen py-8 px-2 sm:px-4"
+        className="flex flex-col items-center py-8 px-2 sm:px-4"
       >
         {/* Overlay for lower pattern opacity */}
         <div style={{
@@ -360,7 +362,7 @@ export default function UserBookingPage() {
         </div>
         {/* Modal for Patient Info */}
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-white/40">
+          <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-white/40 pointer-events-auto overflow-y-auto">
             <div className="bg-white border-2 border-[#DFE7CA] rounded-2xl shadow-2xl p-4 w-full max-w-sm relative animate-fade-in">
               <button
                 className="absolute top-2 right-2 text-gray-400 hover:text-black"
@@ -462,6 +464,26 @@ export default function UserBookingPage() {
                 {/* Expandable Payment/Cancellation Info - moved below submit button */}
                 <Accordion />
               </form>
+            </div>
+          </div>
+        )}
+        {/* Modal for Booking Confirmation */}
+        {confirmationModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-white/40 pointer-events-auto">
+            <div className="bg-white border-2 border-[#DFE7CA] rounded-2xl shadow-2xl p-6 w-full max-w-xs flex flex-col items-center animate-fade-in">
+              <div className="flex items-center justify-center mb-4">
+                <svg className="h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="#DCFCE7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12l3 3 5-5" stroke="#22C55E" />
+                </svg>
+              </div>
+              <div className="text-xl font-bold text-green-700 mb-2 text-center">Η κράτηση επιβεβαιώθηκε!</div>
+              <div className="text-base text-black mb-2 text-center">Σας περιμένουμε!</div>
+              <div className="text-sm text-gray-700 mb-4 text-center">Μπορείτε να κλείσετε την εφαρμογή.</div>
+              <button
+                className="mt-2 px-6 py-2 bg-[#DFE7CA] border border-[#B5C99A] rounded-xl text-black font-bold text-base transition"
+                onClick={() => setConfirmationModal(false)}
+              >Κλείσιμο</button>
             </div>
           </div>
         )}
