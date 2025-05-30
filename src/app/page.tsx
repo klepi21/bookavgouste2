@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { UserIcon, PhoneIcon, EnvelopeIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
 
 const SERVICES = [
   { label: 'Απλή επίσκεψη', duration: '60 λεπτά' },
@@ -16,11 +17,6 @@ const SERVICES = [
   { label: 'Θεραπευτική Συνεδρία', duration: '40 λεπτά' },
 ];
 
-const TIMES = {
-  morning: ['08:30', '09:00', '09:30', '10:00', '10:30', '11:00'],
-  afternoon: ['14:00', '14:30', '15:00', '15:30', '16:00', '16:30'],
-};
-
 export default function UserBookingPage() {
   const [form, setForm] = useState({
     service: SERVICES[0].label,
@@ -33,7 +29,7 @@ export default function UserBookingPage() {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [globalSlots, setGlobalSlots] = useState<any[]>([]); // all global timeslots for the week
+  const [globalSlots, setGlobalSlots] = useState<{ weekday: number; time: string; service?: string }[]>([]); // all global timeslots for the week
   const [timeslots, setTimeslots] = useState<string[] | null>(null); // slots for selected date
   const [timeslotLoading, setTimeslotLoading] = useState(false);
   const [timeslotError, setTimeslotError] = useState<string | null>(null);
@@ -138,16 +134,16 @@ export default function UserBookingPage() {
     // JS getDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
     const weekday = new Date(form.date).getDay();
     // Show global slots for this weekday instantly
-    const slots = globalSlots.filter((s: any) => Number(s.weekday) === Number(weekday)).map((s: any) => s.time);
+    const slots = globalSlots.filter((s) => Number(s.weekday) === Number(weekday)).map((s) => s.time);
     setTimeslots((slots.length > 0 ? slots : []).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })));
     // Now fetch date-specific overrides and update if needed
     async function fetchOverrides() {
       try {
         const overrideRes = await fetch(`/api/date-overrides?date=${form.date}`);
         const overrideData = await overrideRes.json();
-        if (Array.isArray(overrideData) && overrideData.some((o: any) => o.available)) {
+        if (Array.isArray(overrideData) && overrideData.some((o: { available: boolean }) => o.available)) {
           // Only show slots marked available
-          const available = overrideData.filter((o: any) => o.available).map((o: any) => o.time);
+          const available = overrideData.filter((o: { available: boolean }) => o.available).map((o: { time: string }) => o.time);
           setTimeslots((available.length > 0 ? available : []).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })));
         }
       } catch (err) {
@@ -192,8 +188,8 @@ export default function UserBookingPage() {
         if (Array.isArray(data)) {
           // Only bookings for the selected date, extract start time from each booking's time
           const booked = data
-            .filter((b: any) => b.date === form.date)
-            .map((b: any) => b.time && b.time.split(/\s|-/)[0]);
+            .filter((b: { date: string }) => b.date === form.date)
+            .map((b: { time: string }) => b.time && b.time.split(/\s|-/)[0]);
           setBookedSlots(booked);
         } else {
           setBookedSlots([]);
@@ -211,7 +207,7 @@ export default function UserBookingPage() {
     };
   }, []);
 
-  function formatDateClient(dateStr: string, options: any) {
+  function formatDateClient(dateStr: string, options: Intl.DateTimeFormatOptions) {
     if (!mounted) return dateStr;
     const d = new Date(dateStr);
     return d.toLocaleDateString('el-GR', options);
@@ -221,7 +217,7 @@ export default function UserBookingPage() {
   return (
     <>
       <nav className="w-full flex justify-center items-center py-3" style={{ background: '#FFFFFF' }}>
-        <img src="/image.png" alt="Logo" className="h-12" style={{ filter: 'brightness(0) invert(0) drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }} />
+        <Image src="/image.png" alt="Logo" className="h-12" style={{ filter: 'brightness(0) invert(0) drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }} width={48} height={48} />
       </nav>
       <main
         style={{
@@ -271,11 +267,13 @@ export default function UserBookingPage() {
                   }}
                 >
                   <div className="flex items-center w-full h-[56px]">
-                    <img
+                    <Image
                       src={`/${idx + 1}.png`}
                       alt="service"
                       className={`h-16 w-16 object-contain mr-3 flex-shrink-0 transition-transform duration-300 ${animatedIdx === idx ? 'animate-bounce' : ''}`}
                       style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.55))' }}
+                      width={64}
+                      height={64}
                     />
                     <span className="text-black font-bold text-xs text-left flex-1 break-words leading-tight">{service.label}</span>
                   </div>

@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const all = await overrides.find({ date }).toArray();
     await client.close();
     return NextResponse.json(all);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Σφάλμα φόρτωσης overrides.' }, { status: 500 });
   }
 }
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
     await client.close();
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: 'Σφάλμα αποθήκευσης overrides.' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Σφάλμα ενημέρωσης overrides.' }, { status: 500 });
   }
 } 

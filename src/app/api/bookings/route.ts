@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, bookingId: result.insertedId });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Σφάλμα κατά την αποθήκευση του ραντεβού.' }, { status: 500 });
   }
 } 

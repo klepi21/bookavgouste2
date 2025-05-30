@@ -12,8 +12,8 @@ export async function GET() {
     const all = await bookings.find({}).sort({ date: 1, time: 1 }).toArray();
     await client.close();
     return NextResponse.json(all);
-  } catch (error) {
-    return NextResponse.json({ error: 'Σφάλμα φόρτωσης κρατήσεων.' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Σφάλμα κατά τη φόρτωση των κρατήσεων.' }, { status: 500 });
   }
 }
 
@@ -33,7 +33,7 @@ export async function DELETE(req: NextRequest) {
     } else {
       return NextResponse.json({ error: 'Δεν βρέθηκε η κράτηση.' }, { status: 404 });
     }
-  } catch (error) {
-    return NextResponse.json({ error: 'Σφάλμα ακύρωσης.' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Σφάλμα κατά την ενημέρωση της κράτησης.' }, { status: 500 });
   }
 } 

@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const slots = await timeslots.find({ date, service, available: true }).toArray();
     await client.close();
     return NextResponse.json(slots);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch timeslots' }, { status: 500 });
   }
 }
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const result = await timeslots.insertOne({ date, time, service, available: true });
     await client.close();
     return NextResponse.json({ success: true, timeslotId: result.insertedId });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to create timeslot' }, { status: 500 });
   }
 }
@@ -64,7 +64,7 @@ export async function DELETE(req: NextRequest) {
     } else {
       return NextResponse.json({ error: 'Δεν βρέθηκε το timeslot.' }, { status: 404 });
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Σφάλμα διαγραφής timeslot.' }, { status: 500 });
   }
 } 

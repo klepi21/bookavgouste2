@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import { format } from 'date-fns/format';
@@ -59,15 +59,29 @@ function formatGreekTime(time: string): string {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const [bookings, setBookings] = useState<any[]>([]);
+  type Booking = {
+    _id: string;
+    name: string;
+    service: string;
+    date: string;
+    time: string;
+    telephone: string;
+    email: string;
+  };
+  type Timeslot = {
+    _id: string;
+    date: string;
+    time: string;
+    service: string;
+    available: boolean;
+  };
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [bookingsError, setBookingsError] = useState('');
-  const [timeslots, setTimeslots] = useState<any[]>([]);
-  const [timeslotsLoading, setTimeslotsLoading] = useState(false);
-  const [timeslotsError, setTimeslotsError] = useState('');
+  const [timeslots, setTimeslots] = useState<Timeslot[]>([]);
   const [newTimeslot, setNewTimeslot] = useState({ date: '', time: '', service: '' });
   const [message, setMessage] = useState('');
-  const [globalSlots, setGlobalSlots] = useState<any[]>([]);
+  const [globalSlots, setGlobalSlots] = useState<{ weekday: number; time: string; service?: string }[]>([]);
   const [selectedWeekday, setSelectedWeekday] = useState<number>(1); // Default to Monday
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [overrideDate, setOverrideDate] = useState('');
@@ -84,7 +98,7 @@ export default function AdminDashboardPage() {
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
-  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Booking & { confirm?: string } | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('adminSession') !== 'true') {
@@ -114,18 +128,9 @@ export default function AdminDashboardPage() {
   // Fetch timeslots
   useEffect(() => {
     async function fetchTimeslots() {
-      setTimeslotsLoading(true);
-      setTimeslotsError('');
-      try {
-        const res = await fetch('/api/timeslots');
-        const data = await res.json();
-        if (Array.isArray(data)) setTimeslots(data);
-        else setTimeslotsError(data.error || 'Σφάλμα φόρτωσης διαθεσιμότητας.');
-      } catch {
-        setTimeslotsError('Σφάλμα φόρτωσης διαθεσιμότητας.');
-      } finally {
-        setTimeslotsLoading(false);
-      }
+      const res = await fetch('/api/timeslots');
+      const data = await res.json();
+      if (Array.isArray(data)) setTimeslots(data);
     }
     fetchTimeslots();
   }, [message]);
@@ -206,27 +211,6 @@ export default function AdminDashboardPage() {
     const data = await res.json();
     setMessage(data.success ? 'Η κράτηση ακυρώθηκε.' : data.error || 'Σφάλμα ακύρωσης.');
     setBookings(bookings.filter(b => b._id !== id));
-  }
-
-  // Close timeslot
-  async function handleCloseTimeslot(id: string) {
-    const res = await fetch(`/api/timeslots?id=${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    setMessage(data.success ? 'Το timeslot αφαιρέθηκε.' : data.error || 'Σφάλμα.');
-    setTimeslots(timeslots.filter(t => t._id !== id));
-  }
-
-  // Create timeslot
-  async function handleCreateTimeslot(e: any) {
-    e.preventDefault();
-    const res = await fetch('/api/timeslots', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTimeslot),
-    });
-    const data = await res.json();
-    setMessage(data.success ? 'Το timeslot δημιουργήθηκε.' : data.error || 'Σφάλμα.');
-    if (data.success) setNewTimeslot({ date: '', time: '', service: '' });
   }
 
   // Logout

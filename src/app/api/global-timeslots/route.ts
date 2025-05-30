@@ -12,7 +12,7 @@ export async function GET() {
     const all = await globalSlots.find({}).toArray();
     await client.close();
     return NextResponse.json(all);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Σφάλμα φόρτωσης global timeslots.' }, { status: 500 });
   }
 }
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     }
     await client.close();
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Σφάλμα αποθήκευσης global timeslots.' }, { status: 500 });
   }
 } 
