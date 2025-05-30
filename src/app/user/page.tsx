@@ -16,10 +16,32 @@ const SERVICES = [
   { label: 'Θεραπευτική Συνεδρία', duration: '40 λεπτά' },
 ];
 
+// Generate next 7 days for the date picker
+const getNext7Days = () => {
+  const days = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    days.push({
+      date,
+      label: date.toLocaleDateString('el-GR', { weekday: 'short', day: 'numeric', month: 'short' }),
+      value: date.toISOString().split('T')[0],
+    });
+  }
+  return days;
+};
+
 const TIMES = {
   morning: ['08:30', '09:00', '09:30', '10:00', '10:30', '11:00'],
   afternoon: ['14:00', '14:30', '15:00', '15:30', '16:00', '16:30'],
 };
+
+function formatDateClient(dateStr: string, options: any) {
+  if (typeof window === 'undefined') return dateStr;
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('el-GR', options);
+}
 
 export default function UserBookingPage() {
   const [form, setForm] = useState({
@@ -49,20 +71,6 @@ export default function UserBookingPage() {
 
   const days = useMemo(() => {
     if (!mounted) return [];
-    const getNext7Days = () => {
-      const days = [];
-      const today = new Date();
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-        days.push({
-          date,
-          label: date.toLocaleDateString('el-GR', { weekday: 'short', day: 'numeric', month: 'short' }),
-          value: date.toISOString().split('T')[0],
-        });
-      }
-      return days;
-    };
     return getNext7Days();
   }, [mounted]);
 
@@ -208,12 +216,6 @@ export default function UserBookingPage() {
       if (bounceTimeout.current) clearTimeout(bounceTimeout.current);
     };
   }, []);
-
-  function formatDateClient(dateStr: string, options: any) {
-    if (!mounted) return dateStr;
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('el-GR', options);
-  }
 
   if (!mounted) return null;
   return (
@@ -465,7 +467,7 @@ export default function UserBookingPage() {
             </div>
           </div>
         )}
-        <footer className="mt-10 flex justify-center z-20 relative">
+        <footer className="mt-10 flex justify-center">
           <div className="w-full max-w-md bg-[#DFE7CA] rounded-2xl shadow-lg px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 border border-[#B5C99A]">
             <div className="flex flex-col gap-2 flex-1">
               <div className="flex items-center gap-2">
