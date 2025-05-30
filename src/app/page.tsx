@@ -216,8 +216,16 @@ export default function UserBookingPage() {
   if (!mounted) return null;
   return (
     <>
-      <nav className="w-full flex justify-center items-center py-3" style={{ background: '#FFFFFF' }}>
-        <Image src="/image.png" alt="Logo" className="h-12" style={{ filter: 'brightness(0) invert(0) drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }} width={48} height={48} />
+      {/* Modern Centered Navbar with Logo */}
+      <nav className="w-full flex items-center justify-center" style={{ height: 72, background: '#FFFFFF', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+        <Image
+          src="/image.png"
+          alt="Logo"
+          width={110}
+          height={110}
+          style={{ objectFit: 'contain', filter: 'brightness(0) invert(0) drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
+          priority
+        />
       </nav>
       <main
         style={{
