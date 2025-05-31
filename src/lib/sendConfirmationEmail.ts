@@ -37,7 +37,7 @@ export async function sendConfirmationEmail({
     <div style="background:#DFE7CA;padding:32px 0;min-height:100vh;font-family:sans-serif;">
       <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:18px;box-shadow:0 4px 24px rgba(0,0,0,0.07);padding:32px 24px 24px 24px;border:2px solid #B5C99A;">
         <div style="text-align:center;margin-bottom:24px;">
-          <img src='https://avgouste.gr/image.png' alt="Avgouste Logo" style="height:48px;margin-bottom:8px;" />
+          <img src='https://bookavgouste2.vercel.app/image.png' alt="Avgouste Logo" style="height:48px;margin-bottom:8px;" />
           <h1 style="font-size:1.5rem;font-weight:800;color:#222;margin:0;">Επιβεβαίωση Κράτησης</h1>
           <div style="font-size:1rem;color:#5B7553;margin-top:4px;">Σας ευχαριστούμε για την εμπιστοσύνη!</div>
         </div>

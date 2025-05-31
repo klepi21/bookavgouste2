@@ -275,7 +275,7 @@ export default function UserBookingPage() {
                   }}
                 >
                   <div className="flex items-center w-full h-[56px]">
-                    <Image
+            <Image
                       src={`/${idx + 1}.png`}
                       alt="service"
                       className={`h-16 w-16 object-contain mr-3 flex-shrink-0 transition-transform duration-300 ${animatedIdx === idx ? 'animate-bounce' : ''}`}
@@ -522,7 +522,18 @@ export default function UserBookingPage() {
             </div>
           </div>
         </footer>
+        {/* Add extra bottom margin so copyright does not overlap footer */}
+        <div style={{ height: 48 }} />
       </main>
+      {/* Copyright Notice - modern, beautiful, and with extra space */}
+      <div style={{ position: 'fixed', left: 0, bottom: 0, width: '100%', zIndex: 100, background: '#DFE7CA', padding: '14px 0 10px 0', boxShadow: '0 -2px 12px rgba(0,0,0,0.07)', borderTopLeftRadius: 18, borderTopRightRadius: 18, fontFamily: 'var(--font-geist-sans, sans-serif)' }}>
+        <span className="text-sm text-[#5B7553] text-center w-full block font-semibold tracking-wide">
+          © Avgouste 2025 &nbsp;•&nbsp; Created with <span style={{ color: '#E57373', fontSize: '1.1em' }}>❤️</span> by
+          <a href="https://konstantinoslepidas.vercel.app/" target="_blank" rel="noopener noreferrer" className="underline hover:text-green-700 transition font-bold ml-1">
+            K.L.
+          </a>
+        </span>
+      </div>
     </>
   );
 }
@@ -557,4 +568,4 @@ function Accordion() {
       )}
     </div>
   );
-} 
+}
