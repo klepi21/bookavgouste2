@@ -295,21 +295,26 @@ export default function UserBookingPage() {
           <div className="mb-6">
             <label className="block mb-2 text-lg font-extrabold text-black">Ημερομηνία</label>
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {days.map((d) => (
-                <button
-                  key={d.value}
-                  type="button"
-                  className={`flex flex-col items-center px-3 py-2 rounded-lg border transition min-w-[70px] ${form.date === d.value ? 'bg-[#DFE7CA] border-[#DFE7CA]' : 'bg-gray-50 border-gray-200'}`}
-                  onClick={() => {
-                    setForm(f => ({ ...f, date: d.value, time: '' }));
-                    setRefreshKey(k => k + 1);
-                  }}
-                >
-                  <span className="font-bold text-black">{d.label.split(' ')[1]}</span>
-                  <span className="text-xs text-black font-semibold">{d.label.split(' ')[0]}</span>
-                  <span className="text-xs text-black font-semibold">{d.label.split(' ')[2]}</span>
-                </button>
-              ))}
+              {days.map((d) => {
+                const isSunday = new Date(d.value).getDay() === 0;
+                return (
+                  <button
+                    key={d.value}
+                    type="button"
+                    className={`flex flex-col items-center px-3 py-2 rounded-lg border transition min-w-[70px] ${form.date === d.value ? 'bg-[#DFE7CA] border-[#DFE7CA]' : 'bg-gray-50 border-gray-200'} ${isSunday ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    onClick={() => {
+                      if (isSunday) return;
+                      setForm(f => ({ ...f, date: d.value, time: '' }));
+                      setRefreshKey(k => k + 1);
+                    }}
+                    disabled={isSunday}
+                  >
+                    <span className="font-bold text-black">{d.label.split(' ')[1]}</span>
+                    <span className="text-xs text-black font-semibold">{d.label.split(' ')[0]}</span>
+                    <span className="text-xs text-black font-semibold">{d.label.split(' ')[2]}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div className="border-b border-gray-200 my-4" />
