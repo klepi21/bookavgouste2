@@ -324,11 +324,11 @@ export default function AdminDashboardPage() {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Τηλέφωνο</label>
-                  <input type="tel" className="w-full border rounded px-3 py-2" value={newBooking.telephone} onChange={e => setNewBooking({ ...newBooking, telephone: e.target.value })} required />
+                  <input type="tel" className="w-full border rounded px-3 py-2" value={newBooking.telephone} onChange={e => setNewBooking({ ...newBooking, telephone: e.target.value })} />
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Email</label>
-                  <input type="email" className="w-full border rounded px-3 py-2" value={newBooking.email} onChange={e => setNewBooking({ ...newBooking, email: e.target.value })} required />
+                  <input type="email" className="w-full border rounded px-3 py-2" value={newBooking.email} onChange={e => setNewBooking({ ...newBooking, email: e.target.value })} />
                 </div>
                 {bookingError && <div className="text-red-600 text-sm font-bold">{bookingError}</div>}
                 <button type="submit" className="w-full bg-black text-white font-bold py-2 rounded-lg hover:bg-gray-800 transition" disabled={bookingLoading}>{bookingLoading ? 'Αποθήκευση...' : 'Αποθήκευση'}</button>
