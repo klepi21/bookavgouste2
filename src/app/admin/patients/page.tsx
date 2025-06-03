@@ -22,15 +22,14 @@ export default function AdminPatientsPage() {
         const res = await fetch('/api/bookings-list');
         const data = await res.json();
         if (Array.isArray(data)) {
-          // Deduplicate by telephone, but show all unique phones, even if future or past
-          const seen = new Set();
+          // Deduplicate only by name (show only first occurrence of each name)
+          const seenNames = new Set();
           const unique = [];
           for (const b of data) {
-            // Accept if any of name, telephone, or email is present
-            const key = b.telephone || b.email || b.name;
-            if (key && !seen.has(key)) {
-              seen.add(key);
-              unique.push({ name: b.name || '-', telephone: b.telephone || '-', email: b.email || '-' });
+            const name = b.name || '-';
+            if (name && !seenNames.has(name)) {
+              seenNames.add(name);
+              unique.push({ name, telephone: b.telephone || '-', email: b.email || '-' });
             }
           }
           setPatients(unique);
