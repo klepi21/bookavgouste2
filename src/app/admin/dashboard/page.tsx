@@ -99,6 +99,9 @@ export default function AdminDashboardPage() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Booking & { confirm?: string } | null>(null);
+  const [editDate, setEditDate] = useState<string | null>(null);
+  const [editTime, setEditTime] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('adminSession') !== 'true') {
@@ -274,6 +277,14 @@ export default function AdminDashboardPage() {
     };
   });
 
+  // When opening edit modal, initialize editDate/editTime
+  useEffect(() => {
+    if (selectedEvent && selectedEvent.confirm === 'edit') {
+      setEditDate(selectedEvent.date);
+      setEditTime(selectedEvent.time);
+    }
+  }, [selectedEvent]);
+
   return (
     <main className="min-h-screen bg-gray-50 text-black">
       <header className="w-full flex justify-between items-center px-8 py-6 border-b border-gray-200 bg-white sticky top-0 z-10">
@@ -397,75 +408,67 @@ export default function AdminDashboardPage() {
                   <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
                     <div className="bg-white rounded-xl shadow-lg p-6 max-w-xs w-full">
                       <div className="mb-4 text-black font-bold">Επεξεργασία κράτησης</div>
-                      {/* Controlled edit form for booking */}
-                      {(() => {
-                        const [editDate, setEditDate] = useState(selectedEvent.date);
-                        const [editTime, setEditTime] = useState(selectedEvent.time);
-                        const [saving, setSaving] = useState(false);
-                        return (
-                          <form
-                            className="space-y-3"
-                            onSubmit={async e => {
-                              e.preventDefault();
-                              if (!editDate || !editTime) return;
-                              setSaving(true);
-                              const res = await fetch(`/api/bookings-list?id=${selectedEvent._id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ date: editDate, time: editTime }),
-                              });
-                              const data = await res.json();
-                              setSaving(false);
-                              if (res.ok && data.success) {
-                                setSelectedEvent(null);
-                                setMessage('Η κράτηση ενημερώθηκε!');
-                                // Refresh bookings
-                                const res2 = await fetch('/api/bookings-list');
-                                const data2 = await res2.json();
-                                setBookings(Array.isArray(data2) ? data2 : []);
-                              } else {
-                                alert(data.error || 'Σφάλμα ενημέρωσης κράτησης.');
-                              }
-                            }}
-                          >
-                            <div>
-                              <label className="block font-semibold mb-1">Ημερομηνία</label>
-                              <input
-                                type="date"
-                                name="date"
-                                className="w-full border rounded px-3 py-2"
-                                value={editDate}
-                                onChange={e => setEditDate(e.target.value)}
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="block font-semibold mb-1">Ώρα</label>
-                              <input
-                                type="text"
-                                name="time"
-                                className="w-full border rounded px-3 py-2"
-                                value={editTime}
-                                onChange={e => setEditTime(e.target.value)}
-                                required
-                              />
-                            </div>
-                            <div className="flex gap-3 justify-end mt-4">
-                              <button
-                                type="button"
-                                className="px-4 py-2 rounded bg-gray-200"
-                                onClick={() => setSelectedEvent({ ...selectedEvent, confirm: undefined })}
-                                disabled={saving}
-                              >Άκυρο</button>
-                              <button
-                                type="submit"
-                                className="px-4 py-2 rounded bg-orange-500 text-white font-bold"
-                                disabled={saving || !editDate || !editTime}
-                              >{saving ? 'Αποθήκευση...' : 'Αποθήκευση'}</button>
-                            </div>
-                          </form>
-                        );
-                      })()}
+                      <form
+                        className="space-y-3"
+                        onSubmit={async e => {
+                          e.preventDefault();
+                          if (!editDate || !editTime) return;
+                          setEditSaving(true);
+                          const res = await fetch(`/api/bookings-list?id=${selectedEvent._id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ date: editDate, time: editTime }),
+                          });
+                          const data = await res.json();
+                          setEditSaving(false);
+                          if (res.ok && data.success) {
+                            setSelectedEvent(null);
+                            setMessage('Η κράτηση ενημερώθηκε!');
+                            // Refresh bookings
+                            const res2 = await fetch('/api/bookings-list');
+                            const data2 = await res2.json();
+                            setBookings(Array.isArray(data2) ? data2 : []);
+                          } else {
+                            alert(data.error || 'Σφάλμα ενημέρωσης κράτησης.');
+                          }
+                        }}
+                      >
+                        <div>
+                          <label className="block font-semibold mb-1">Ημερομηνία</label>
+                          <input
+                            type="date"
+                            name="date"
+                            className="w-full border rounded px-3 py-2"
+                            value={editDate || ''}
+                            onChange={e => setEditDate(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold mb-1">Ώρα</label>
+                          <input
+                            type="text"
+                            name="time"
+                            className="w-full border rounded px-3 py-2"
+                            value={editTime || ''}
+                            onChange={e => setEditTime(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="flex gap-3 justify-end mt-4">
+                          <button
+                            type="button"
+                            className="px-4 py-2 rounded bg-gray-200"
+                            onClick={() => setSelectedEvent({ ...selectedEvent, confirm: undefined })}
+                            disabled={editSaving}
+                          >Άκυρο</button>
+                          <button
+                            type="submit"
+                            className="px-4 py-2 rounded bg-orange-500 text-white font-bold"
+                            disabled={editSaving || !editDate || !editTime}
+                          >{editSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}</button>
+                        </div>
+                      </form>
                     </div>
                   </div>
                 )}
