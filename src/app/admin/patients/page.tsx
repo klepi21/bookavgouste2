@@ -22,13 +22,15 @@ export default function AdminPatientsPage() {
         const res = await fetch('/api/bookings-list');
         const data = await res.json();
         if (Array.isArray(data)) {
-          // Deduplicate by telephone, only show first name for each phone
+          // Deduplicate by telephone, but show all unique phones, even if future or past
           const seen = new Set();
           const unique = [];
           for (const b of data) {
-            if (b.telephone && !seen.has(b.telephone)) {
-              seen.add(b.telephone);
-              unique.push({ name: b.name, telephone: b.telephone, email: b.email });
+            // Accept if any of name, telephone, or email is present
+            const key = b.telephone || b.email || b.name;
+            if (key && !seen.has(key)) {
+              seen.add(key);
+              unique.push({ name: b.name || '-', telephone: b.telephone || '-', email: b.email || '-' });
             }
           }
           setPatients(unique);
@@ -45,34 +47,51 @@ export default function AdminPatientsPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-gray-50 text-black p-8">
-      <h1 className="text-3xl font-extrabold mb-6">Λίστα Ασθενών</h1>
-      {loading ? (
-        <div className="text-center text-black">Φόρτωση...</div>
-      ) : error ? (
-        <div className="text-center text-red-600">{error}</div>
-      ) : (
-        <div className="overflow-x-auto rounded-2xl shadow border border-gray-200 bg-white">
-          <table className="w-full text-base border-separate border-spacing-y-2">
-            <thead className="sticky top-0 bg-white z-10">
-              <tr>
-                <th className="py-3 px-2 text-left font-bold">Όνομα</th>
-                <th className="py-3 px-2 text-left font-bold">Τηλέφωνο</th>
-                <th className="py-3 px-2 text-left font-bold">Email</th>
-              </tr>
-            </thead>
-            <tbody>
-              {patients.map((p, i) => (
-                <tr key={p.telephone || i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                  <td className="py-2 px-2">{p.name}</td>
-                  <td className="py-2 px-2">{p.telephone}</td>
-                  <td className="py-2 px-2">{p.email}</td>
+    <main className="min-h-screen bg-gradient-to-br from-green-50 to-[#DFE7CA] text-black pb-12">
+      {/* Sticky Navbar */}
+      <nav className="sticky top-0 z-20 bg-white/90 backdrop-blur flex items-center justify-between px-6 py-4 shadow-sm rounded-b-2xl mb-8">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Λίστα Ασθενών</h1>
+        <button
+          onClick={() => router.push('/admin/dashboard')}
+          className="bg-[#B5C99A] hover:bg-[#5B7553] text-white font-bold px-5 py-2 rounded-lg transition text-base shadow"
+        >
+          Επιστροφή στο Dashboard
+        </button>
+      </nav>
+      <div className="max-w-3xl mx-auto">
+        {loading ? (
+          <div className="text-center text-black text-lg font-semibold py-12">Φόρτωση...</div>
+        ) : error ? (
+          <div className="text-center text-red-600 text-lg font-semibold py-12">{error}</div>
+        ) : (
+          <div className="rounded-2xl shadow-xl border border-[#B5C99A] bg-white overflow-hidden">
+            <table className="w-full text-base border-separate border-spacing-y-2">
+              <thead className="sticky top-0 bg-[#DFE7CA] z-10">
+                <tr>
+                  <th className="py-3 px-2 text-left font-bold text-[#5B7553]">Όνομα</th>
+                  <th className="py-3 px-2 text-left font-bold text-[#5B7553]">Τηλέφωνο</th>
+                  <th className="py-3 px-2 text-left font-bold text-[#5B7553]">Email</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {patients.map((p, i) => (
+                  <tr
+                    key={p.telephone + p.email + i}
+                    className={
+                      'transition hover:bg-[#FBDAC6]/60 ' +
+                      (i % 2 === 0 ? 'bg-[#F8F9F4]' : 'bg-white')
+                    }
+                  >
+                    <td className="py-2 px-2 font-semibold text-black">{p.name}</td>
+                    <td className="py-2 px-2 text-black">{p.telephone}</td>
+                    <td className="py-2 px-2 text-black">{p.email}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </main>
   );
 } 
