@@ -102,6 +102,9 @@ export default function AdminDashboardPage() {
   const [editDate, setEditDate] = useState<string | null>(null);
   const [editTime, setEditTime] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [patientOptions, setPatientOptions] = useState<{ name: string; telephone: string; email: string }[]>([]);
+  const [nameSearch, setNameSearch] = useState('');
+  const [showNameDropdown, setShowNameDropdown] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('adminSession') !== 'true') {
@@ -285,6 +288,29 @@ export default function AdminDashboardPage() {
     }
   }, [selectedEvent]);
 
+  // Fetch unique patient names for dropdown
+  useEffect(() => {
+    async function fetchPatients() {
+      try {
+        const res = await fetch('/api/bookings-list');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const seen = new Set();
+          const unique = [];
+          for (const b of data) {
+            const name = b.name?.trim();
+            if (name && !seen.has(name)) {
+              seen.add(name);
+              unique.push({ name, telephone: b.telephone || '', email: b.email || '' });
+            }
+          }
+          setPatientOptions(unique);
+        }
+      } catch {}
+    }
+    fetchPatients();
+  }, [showBookingModal]);
+
   return (
     <main className="min-h-screen bg-gray-50 text-black">
       <header className="w-full flex justify-between items-center px-8 py-6 border-b border-gray-200 bg-white sticky top-0 z-10">
@@ -320,7 +346,42 @@ export default function AdminDashboardPage() {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Όνομα</label>
-                  <input type="text" className="w-full border rounded px-3 py-2" value={newBooking.name} onChange={e => setNewBooking({ ...newBooking, name: e.target.value })} required />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      className="w-full border rounded px-3 py-2"
+                      value={newBooking.name}
+                      onChange={e => {
+                        setNewBooking({ ...newBooking, name: e.target.value });
+                        setNameSearch(e.target.value);
+                        setShowNameDropdown(true);
+                      }}
+                      onFocus={() => setShowNameDropdown(true)}
+                      autoComplete="off"
+                      required
+                    />
+                    {showNameDropdown && nameSearch.length > 0 && (
+                      <div className="absolute z-20 left-0 right-0 bg-white border rounded shadow max-h-48 overflow-y-auto">
+                        {patientOptions.filter(p => p.name.toLowerCase().includes(nameSearch.toLowerCase())).length === 0 ? (
+                          <div className="px-3 py-2 text-gray-500">Δεν βρέθηκε, πληκτρολογήστε νέο όνομα</div>
+                        ) : (
+                          patientOptions.filter(p => p.name.toLowerCase().includes(nameSearch.toLowerCase())).map((p, i) => (
+                            <div
+                              key={p.name + i}
+                              className="px-3 py-2 hover:bg-[#DFE7CA] cursor-pointer"
+                              onClick={() => {
+                                setNewBooking({ ...newBooking, name: p.name, telephone: p.telephone, email: p.email });
+                                setNameSearch(p.name);
+                                setShowNameDropdown(false);
+                              }}
+                            >
+                              {p.name} <span className="text-xs text-gray-400">{p.telephone} {p.email}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Τηλέφωνο</label>
@@ -333,6 +394,14 @@ export default function AdminDashboardPage() {
                 {bookingError && <div className="text-red-600 text-sm font-bold">{bookingError}</div>}
                 <button type="submit" className="w-full bg-black text-white font-bold py-2 rounded-lg hover:bg-gray-800 transition" disabled={bookingLoading}>{bookingLoading ? 'Αποθήκευση...' : 'Αποθήκευση'}</button>
               </form>
+              {/* Hide dropdown on click outside */}
+              {showNameDropdown && (
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowNameDropdown(false)}
+                  style={{ pointerEvents: 'auto' }}
+                />
+              )}
             </div>
           </div>
         )}
