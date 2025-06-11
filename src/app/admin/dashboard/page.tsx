@@ -683,7 +683,15 @@ function OverridesTable() {
   }, []);
   if (loading) return <div className="p-8 text-center text-black">Φόρτωση overrides...</div>;
   if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
-  if (overrides.length === 0) return <div className="p-8 text-center text-black">Δεν υπάρχουν overrides.</div>;
+  const filteredOverrides = overrides.filter(o => {
+    if (!o.date) return false;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const overrideDate = new Date(o.date);
+    overrideDate.setHours(0,0,0,0);
+    return overrideDate >= today;
+  });
+  if (filteredOverrides.length === 0) return <div className="p-8 text-center text-black">Δεν υπάρχουν overrides.</div>;
   return (
     <div className="overflow-x-auto rounded-2xl shadow border border-gray-200 bg-white mt-8">
       <h2 className="text-lg font-bold mb-2 text-black px-4 pt-4">Όλα τα Overrides</h2>
@@ -696,7 +704,7 @@ function OverridesTable() {
           </tr>
         </thead>
         <tbody>
-          {overrides.map((o, i) => (
+          {filteredOverrides.map((o, i) => (
             <tr key={o.date + o.time + i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
               <td className="py-2 px-2">{o.date}</td>
               <td className="py-2 px-2">{o.time}</td>
