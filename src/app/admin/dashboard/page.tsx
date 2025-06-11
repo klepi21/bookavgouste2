@@ -360,6 +360,29 @@ export default function AdminDashboardPage() {
     return dt > new Date();
   }
 
+  // Helper to check if an override is in the future (date+time)
+  function isOverrideInFuture(o: any) {
+    if (!o.date || !o.time) return false;
+    let timeStr = o.time;
+    if (timeStr.includes('-')) timeStr = timeStr.split('-')[0].trim();
+    let hour = 0, minute = 0;
+    let match = timeStr.match(/(\d{1,2}):(\d{2})\s*(π\.μ\.|μ\.μ\.)?/);
+    if (match) {
+      hour = parseInt(match[1], 10);
+      minute = parseInt(match[2], 10);
+      const ampm = match[3];
+      if (ampm === 'μ.μ.' && hour < 12) hour += 12;
+      if (ampm === 'π.μ.' && hour === 12) hour = 0;
+    } else {
+      const parts = timeStr.split(':');
+      hour = parseInt(parts[0], 10);
+      minute = parseInt(parts[1] || '0', 10);
+    }
+    const dt = new Date(o.date);
+    dt.setHours(hour, minute, 0, 0);
+    return dt >= new Date();
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 text-black">
       <header className="w-full flex justify-between items-center px-8 py-6 border-b border-gray-200 bg-white sticky top-0 z-10">
@@ -707,7 +730,7 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {allOverrides.map((o, i) => (
+                {allOverrides.filter(isOverrideInFuture).map((o, i) => (
                   <tr key={o._id || i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                     <td className="py-2 px-2">{o.date}</td>
                     <td className="py-2 px-2">{formatGreekTime(o.time)}</td>
