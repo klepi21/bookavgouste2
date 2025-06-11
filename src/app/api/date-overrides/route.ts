@@ -6,15 +6,24 @@ const uri = process.env.MONGODB_URI as string;
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const date = searchParams.get('date');
-    if (!date) return NextResponse.json({ error: 'date required' }, { status: 400 });
+    const allFlag = searchParams.get('all');
     const client = new MongoClient(uri);
     await client.connect();
     const db = client.db();
     const overrides = db.collection('date_overrides');
-    const all = await overrides.find({ date }).toArray();
+    let result;
+    if (allFlag) {
+      result = await overrides.find({}).toArray();
+    } else {
+      const date = searchParams.get('date');
+      if (!date) {
+        await client.close();
+        return NextResponse.json({ error: 'date required' }, { status: 400 });
+      }
+      result = await overrides.find({ date }).toArray();
+    }
     await client.close();
-    return NextResponse.json(all);
+    return NextResponse.json(result);
   } catch {
     return NextResponse.json({ error: 'Σφάλμα φόρτωσης overrides.' }, { status: 500 });
   }
