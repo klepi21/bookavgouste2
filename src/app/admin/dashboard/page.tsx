@@ -566,19 +566,28 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {bookings.map((b, i) => (
-                  <tr key={b._id} className={i % 2 === 0 ? 'bg-gray-50 hover:bg-orange-50 transition' : 'bg-white hover:bg-orange-50 transition'}>
-                    <td className="py-2 px-2 rounded-l-xl">{b.service}</td>
-                    <td className="py-2 px-2">{b.date}</td>
-                    <td className="py-2 px-2">{formatGreekTime(b.time)}</td>
-                    <td className="py-2 px-2">{b.name}</td>
-                    <td className="py-2 px-2">{b.telephone}</td>
-                    <td className="py-2 px-2">{b.email}</td>
-                    <td className="py-2 px-2 rounded-r-xl">
-                      <button onClick={() => handleCancelBooking(b._id)} className="text-red-600 hover:underline font-bold">Ακύρωση</button>
-                    </td>
-                  </tr>
-                ))}
+                {bookings
+                  .filter(b => {
+                    // Only show today and future bookings
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+                    const bookingDate = new Date(b.date);
+                    bookingDate.setHours(0,0,0,0);
+                    return bookingDate >= today;
+                  })
+                  .map((b, i) => (
+                    <tr key={b._id} className={i % 2 === 0 ? 'bg-gray-50 hover:bg-orange-50 transition' : 'bg-white hover:bg-orange-50 transition'}>
+                      <td className="py-2 px-2 rounded-l-xl">{b.service}</td>
+                      <td className="py-2 px-2">{b.date}</td>
+                      <td className="py-2 px-2">{formatGreekTime(b.time)}</td>
+                      <td className="py-2 px-2">{b.name}</td>
+                      <td className="py-2 px-2">{b.telephone}</td>
+                      <td className="py-2 px-2">{b.email}</td>
+                      <td className="py-2 px-2 rounded-r-xl">
+                        <button onClick={() => handleCancelBooking(b._id)} className="text-red-600 hover:underline font-bold">Ακύρωση</button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           )}
@@ -642,7 +651,60 @@ export default function AdminDashboardPage() {
             )}
           </div>
         </div>
+        {/* Overrides Table */}
+        <OverridesTable />
       </div>
     </main>
+  );
+}
+
+// Show all date-specific overrides in a table
+import { useEffect as useOverridesEffect, useState as useOverridesState } from 'react';
+function OverridesTable() {
+  const [overrides, setOverrides] = useOverridesState<any[]>([]);
+  const [loading, setLoading] = useOverridesState(true);
+  const [error, setError] = useOverridesState('');
+  useOverridesEffect(() => {
+    async function fetchOverrides() {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await fetch('/api/date-overrides?all=1');
+        const data = await res.json();
+        if (Array.isArray(data)) setOverrides(data);
+        else setError(data.error || 'Σφάλμα φόρτωσης overrides.');
+      } catch {
+        setError('Σφάλμα φόρτωσης overrides.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchOverrides();
+  }, []);
+  if (loading) return <div className="p-8 text-center text-black">Φόρτωση overrides...</div>;
+  if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
+  if (overrides.length === 0) return <div className="p-8 text-center text-black">Δεν υπάρχουν overrides.</div>;
+  return (
+    <div className="overflow-x-auto rounded-2xl shadow border border-gray-200 bg-white mt-8">
+      <h2 className="text-lg font-bold mb-2 text-black px-4 pt-4">Όλα τα Overrides</h2>
+      <table className="w-full text-base border-separate border-spacing-y-2">
+        <thead className="sticky top-0 bg-white z-10">
+          <tr>
+            <th className="py-3 px-2 text-left font-bold">Ημερομηνία</th>
+            <th className="py-3 px-2 text-left font-bold">Ώρα</th>
+            <th className="py-3 px-2 text-left font-bold">Διαθέσιμο</th>
+          </tr>
+        </thead>
+        <tbody>
+          {overrides.map((o, i) => (
+            <tr key={o.date + o.time + i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+              <td className="py-2 px-2">{o.date}</td>
+              <td className="py-2 px-2">{o.time}</td>
+              <td className="py-2 px-2">{o.available ? 'Ναι' : 'Όχι'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 } 
