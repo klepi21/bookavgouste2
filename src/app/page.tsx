@@ -287,7 +287,7 @@ export default function UserBookingPage() {
                       style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.55))' }}
                       width={64}
                       height={64}
-                    />
+            />
                     <span className="text-black font-bold text-xs text-left flex-1 break-words leading-tight">{service.label}</span>
                   </div>
                   <span className="text-xs text-black font-normal mt-1 ml-1 w-full truncate">{service.duration}</span>

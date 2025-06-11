@@ -1,0 +1,14 @@
+{
+  "/api/date-overrides/route": "/api/date-overrides",
+  "/_not-found/page": "/_not-found",
+  "/api/bookings-list/route": "/api/bookings-list",
+  "/api/bookings/route": "/api/bookings",
+  "/api/global-timeslots/route": "/api/global-timeslots",
+  "/favicon.ico/route": "/favicon.ico",
+  "/api/timeslots/route": "/api/timeslots",
+  "/admin/dashboard/page": "/admin/dashboard",
+  "/admin/login/page": "/admin/login",
+  "/user/page": "/user",
+  "/page": "/",
+  "/admin/page": "/admin"
+}

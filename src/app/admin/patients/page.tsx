@@ -58,22 +58,22 @@ export default function AdminPatientsPage() {
         </button>
       </nav>
       <div className="max-w-3xl mx-auto">
-        {loading ? (
+      {loading ? (
           <div className="text-center text-black text-lg font-semibold py-12">Φόρτωση...</div>
-        ) : error ? (
+      ) : error ? (
           <div className="text-center text-red-600 text-lg font-semibold py-12">{error}</div>
-        ) : (
+      ) : (
           <div className="rounded-2xl shadow-xl border border-[#B5C99A] bg-white overflow-hidden">
-            <table className="w-full text-base border-separate border-spacing-y-2">
+          <table className="w-full text-base border-separate border-spacing-y-2">
               <thead className="sticky top-0 bg-[#DFE7CA] z-10">
-                <tr>
+              <tr>
                   <th className="py-3 px-2 text-left font-bold text-[#5B7553]">Όνομα</th>
                   <th className="py-3 px-2 text-left font-bold text-[#5B7553]">Τηλέφωνο</th>
                   <th className="py-3 px-2 text-left font-bold text-[#5B7553]">Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                {patients.map((p, i) => (
+              </tr>
+            </thead>
+            <tbody>
+              {patients.map((p, i) => (
                   <tr
                     key={p.telephone + p.email + i}
                     className={
@@ -84,12 +84,12 @@ export default function AdminPatientsPage() {
                     <td className="py-2 px-2 font-semibold text-black">{p.name}</td>
                     <td className="py-2 px-2 text-black">{p.telephone}</td>
                     <td className="py-2 px-2 text-black">{p.email}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       </div>
     </main>
   );
