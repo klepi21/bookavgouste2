@@ -7,12 +7,16 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const date = searchParams.get('date');
-    if (!date) return NextResponse.json({ error: 'date required' }, { status: 400 });
     const client = new MongoClient(uri);
     await client.connect();
     const db = client.db();
     const overrides = db.collection('date_overrides');
-    const all = await overrides.find({ date }).toArray();
+    let all;
+    if (date) {
+      all = await overrides.find({ date }).toArray();
+    } else {
+      all = await overrides.find({}).toArray();
+    }
     await client.close();
     return NextResponse.json(all);
   } catch {
