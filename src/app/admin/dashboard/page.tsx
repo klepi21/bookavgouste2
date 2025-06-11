@@ -105,6 +105,7 @@ export default function AdminDashboardPage() {
   const [patientOptions, setPatientOptions] = useState<{ name: string; telephone: string; email: string }[]>([]);
   const [nameSearch, setNameSearch] = useState('');
   const [showNameDropdown, setShowNameDropdown] = useState(false);
+  const [allOverrides, setAllOverrides] = useState<any[]>([]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('adminSession') !== 'true') {
@@ -310,6 +311,54 @@ export default function AdminDashboardPage() {
     }
     fetchPatients();
   }, [showBookingModal]);
+
+  // Fetch all overrides on mount and when message changes
+  useEffect(() => {
+    async function fetchAllOverrides() {
+      const res = await fetch('/api/date-overrides');
+      const data = await res.json();
+      if (Array.isArray(data)) setAllOverrides(data);
+    }
+    fetchAllOverrides();
+  }, [message]);
+
+  // Helper to check if a slot is available (for global slots)
+  function isSlotAvailable(time: string) {
+    return selectedSlots.includes(time);
+  }
+
+  // Helper to check if a slot is available (for override slots)
+  function isOverrideSlotAvailable(time: string) {
+    return !!overrideSlots[time];
+  }
+
+  // Helper to filter bookings to only future ones
+  function isBookingInFuture(b: Booking) {
+    // Combine date and time to a Date object robustly
+    let dateStr = b.date;
+    let timeStr = b.time;
+    if (!dateStr || !timeStr) return false;
+    // If time is a range, use the start time
+    if (timeStr.includes('-')) timeStr = timeStr.split('-')[0].trim();
+    // Handle Greek AM/PM (π.μ., μ.μ.)
+    let hour = 0, minute = 0;
+    let match = timeStr.match(/(\d{1,2}):(\d{2})\s*(π\.μ\.|μ\.μ\.)?/);
+    if (match) {
+      hour = parseInt(match[1], 10);
+      minute = parseInt(match[2], 10);
+      const ampm = match[3];
+      if (ampm === 'μ.μ.' && hour < 12) hour += 12;
+      if (ampm === 'π.μ.' && hour === 12) hour = 0;
+    } else {
+      // fallback: try just splitting
+      const parts = timeStr.split(':');
+      hour = parseInt(parts[0], 10);
+      minute = parseInt(parts[1] || '0', 10);
+    }
+    const dt = new Date(dateStr);
+    dt.setHours(hour, minute, 0, 0);
+    return dt > new Date();
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 text-black">
@@ -566,7 +615,7 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {bookings.map((b, i) => (
+                {bookings.filter(isBookingInFuture).map((b, i) => (
                   <tr key={b._id} className={i % 2 === 0 ? 'bg-gray-50 hover:bg-orange-50 transition' : 'bg-white hover:bg-orange-50 transition'}>
                     <td className="py-2 px-2 rounded-l-xl">{b.service}</td>
                     <td className="py-2 px-2">{b.date}</td>
@@ -605,8 +654,9 @@ export default function AdminDashboardPage() {
               {HOUR_SLOTS.map(time => (
                 <button
                   key={time}
-                  className={`px-2 py-2 rounded border font-bold text-sm transition text-black ${selectedSlots.includes(time) ? 'bg-orange-200 border-orange-400' : 'bg-white border-gray-300'}`}
-                  onClick={() => toggleSlot(time)}
+                  className={`px-2 py-2 rounded border font-bold text-sm transition text-black ${isSlotAvailable(time) ? 'bg-orange-200 border-orange-400' : 'bg-gray-300 border-gray-400 opacity-60 cursor-not-allowed'}`}
+                  onClick={() => isSlotAvailable(time) ? toggleSlot(time) : null}
+                  disabled={!isSlotAvailable(time)}
                 >
                   {time}
                 </button>
@@ -628,8 +678,9 @@ export default function AdminDashboardPage() {
                       {HOUR_SLOTS.map(time => (
                         <button
                           key={time}
-                          className={`px-2 py-2 rounded border font-bold text-sm transition text-black ${overrideSlots[time] ? 'bg-orange-200 border-orange-400' : 'bg-white border-gray-300'}`}
-                          onClick={() => toggleOverrideSlot(time)}
+                          className={`px-2 py-2 rounded border font-bold text-sm transition text-black ${isOverrideSlotAvailable(time) ? 'bg-orange-200 border-orange-400' : 'bg-gray-300 border-gray-400 opacity-60 cursor-not-allowed'}`}
+                          onClick={() => isOverrideSlotAvailable(time) ? toggleOverrideSlot(time) : null}
+                          disabled={!isOverrideSlotAvailable(time)}
                         >
                           {time}
                         </button>
@@ -641,6 +692,31 @@ export default function AdminDashboardPage() {
               </>
             )}
           </div>
+        </div>
+        <div className="mt-8 bg-white rounded-2xl shadow p-4">
+          <h3 className="text-lg font-bold mb-2 text-black">Λίστα Overrides</h3>
+          {allOverrides.length === 0 ? (
+            <div className="text-black">Δεν υπάρχουν overrides.</div>
+          ) : (
+            <table className="w-full text-base border-separate border-spacing-y-2">
+              <thead>
+                <tr>
+                  <th className="py-2 px-2 text-left font-bold">Ημερομηνία</th>
+                  <th className="py-2 px-2 text-left font-bold">Ώρα</th>
+                  <th className="py-2 px-2 text-left font-bold">Διαθεσιμότητα</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allOverrides.map((o, i) => (
+                  <tr key={o._id || i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                    <td className="py-2 px-2">{o.date}</td>
+                    <td className="py-2 px-2">{formatGreekTime(o.time)}</td>
+                    <td className="py-2 px-2">{o.available ? 'Διαθέσιμο' : 'Μη διαθέσιμο'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </main>
