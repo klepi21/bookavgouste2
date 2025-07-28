@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { UserIcon, PhoneIcon, EnvelopeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
+import ClientWrapper from '@/components/ClientWrapper';
 
 const SERVICES = [
   { label: 'Απλή επίσκεψη', duration: '60 λεπτά' },
@@ -17,7 +18,7 @@ const SERVICES = [
   { label: 'Θεραπευτική Συνεδρία', duration: '40 λεπτά' },
 ];
 
-export default function UserBookingPage() {
+function UserBookingPageContent() {
   const [form, setForm] = useState({
     service: SERVICES[0].label,
     date: '',
@@ -540,6 +541,14 @@ export default function UserBookingPage() {
         </span>
       </div>
     </>
+  );
+}
+
+export default function UserBookingPage() {
+  return (
+    <ClientWrapper>
+      <UserBookingPageContent />
+    </ClientWrapper>
   );
 }
 
