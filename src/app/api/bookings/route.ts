@@ -10,8 +10,8 @@ export async function POST(req: NextRequest) {
     const { service, date, time, name, telephone, email } = body;
 
     // Basic validation
-    if (!service || !date || !time || !name || !telephone || !email) {
-      return NextResponse.json({ error: 'Όλα τα πεδία είναι υποχρεωτικά.' }, { status: 400 });
+    if (!service || !date || !time || !name) {
+      return NextResponse.json({ error: 'Τα πεδία υπηρεσία, ημερομηνία, ώρα και όνομα είναι υποχρεωτικά.' }, { status: 400 });
     }
 
     // Connect to MongoDB
@@ -47,20 +47,22 @@ export async function POST(req: NextRequest) {
 
     await client.close();
 
-    // Send confirmation email to user and admin
-    try {
-      await sendConfirmationEmail({
-        to: [email, process.env.ADMIN_EMAIL!],
-        userName: name,
-        userEmail: email,
-        service,
-        date,
-        time,
-        telephone,
-      });
-    } catch (e) {
-      // Log but do not block booking
-      console.error('Email send error:', e);
+    // Send confirmation email to user and admin (only if email is provided)
+    if (email) {
+      try {
+        await sendConfirmationEmail({
+          to: [email, process.env.ADMIN_EMAIL!],
+          userName: name,
+          userEmail: email,
+          service,
+          date,
+          time,
+          telephone: telephone || 'Δεν δόθηκε',
+        });
+      } catch (e) {
+        // Log but do not block booking
+        console.error('Email send error:', e);
+      }
     }
 
     return NextResponse.json({ success: true, bookingId: result.insertedId });

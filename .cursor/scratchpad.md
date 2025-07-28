@@ -130,6 +130,8 @@ The above admin dashboard improvements have been implemented. Please review the 
 - **ENHANCED**: Replaced service text input with dropdown selection in admin booking modal using predefined services list
 - **ENHANCED**: Replaced time text input with dropdown selection (09:00-21:00 with 30-minute intervals) in admin booking modal
 - **CONFIGURED**: Disabled all ESLint rules in eslint.config.mjs and .eslintrc.json for development flexibility
+- **ENHANCED**: Made telephone and email optional in admin booking modal with expandable contact fields section
+- **FIXED**: Updated API validation to make telephone and email truly optional, and handle email sending only when email is provided
 - **NEW**: Added time-based sorting for bookings (9:00 appears before 11:00-12:00)
 
 The interactive calendar is now live and working with the app's color scheme. The admin dashboard now has a much more modern and user-friendly interface for viewing and managing bookings.
