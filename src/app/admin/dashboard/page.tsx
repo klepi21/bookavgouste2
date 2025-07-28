@@ -1,43 +1,37 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
-import { format } from 'date-fns/format';
-import { parse } from 'date-fns/parse';
-import { startOfWeek } from 'date-fns/startOfWeek';
-import { getDay } from 'date-fns/getDay';
-import { el as elGR } from 'date-fns/locale';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
+import BookingCalendar from '@/components/ui/booking-calendar';
+
+import { Navbar1 } from '@/components/ui/navbar-1';
 
 const WEEKDAYS = [
   'Κυριακή', 'Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο'
 ];
+
+const SERVICES = [
+  'Απλή επίσκεψη',
+  'Αντιμετώπιση μυοσκελετικού πόνου',
+  'Αντιμετώπιση κεφαλαγίας - ημικρανίας',
+  'Αντιμετώπιση αυχενικού συνδρόμου',
+  'Αντιμετώπιση οσφυαλγίας',
+  'Αντιμετώπιση άγχους',
+  'Διακοπή καπνίσματος',
+  'Αντιμετώπιση δυσμηνόρροιας',
+  'Αντιμετώπιση Παχυσαρκίας',
+  'Θεραπευτική Συνεδρία'
+];
+
+// Generate time slots from 09:00 to 21:00 with 30-minute intervals
+const TIME_SLOTS = Array.from({ length: 25 }, (_, i) => {
+  const hour = Math.floor(i / 2) + 9;
+  const minute = (i % 2) * 30;
+  return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+});
 const HOUR_SLOTS = Array.from({ length: 13 }, (_, i) => {
   const hour = 9 + i;
   return `${hour.toString().padStart(2, '0')}:00 - ${(hour + 1).toString().padStart(2, '0')}:00`;
 });
-
-const locales = {
-  'el': elGR,
-};
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
-  getDay,
-  locales,
-});
-
-// Helper for Greek time labels with AM/PM
-function greekTimeLabel(date: Date) {
-  let hour = date.getHours();
-  const minute = date.getMinutes();
-  const isAM = hour < 12;
-  const suffix = isAM ? 'π.μ.' : 'μ.μ.';
-  let displayHour = hour % 12;
-  if (displayHour === 0) displayHour = 12;
-  return `${displayHour}:${minute.toString().padStart(2, '0')} ${suffix}`;
-}
 
 // Helper to convert a time string (e.g. '13:30') to Greek format
 function formatGreekTime(time: string): string {
@@ -105,6 +99,7 @@ export default function AdminDashboardPage() {
   const [patientOptions, setPatientOptions] = useState<{ name: string; telephone: string; email: string }[]>([]);
   const [nameSearch, setNameSearch] = useState('');
   const [showNameDropdown, setShowNameDropdown] = useState(false);
+  const [activeTab, setActiveTab] = useState('calendar');
 
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('adminSession') !== 'true') {
@@ -254,31 +249,18 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Map bookings to calendar events
-  const calendarEvents = bookings.map(b => {
-    // If time is a range, use the start time; if not, use as is
-    let startTime = b.time;
-    if (b.time && b.time.includes('-')) startTime = b.time.split('-')[0].trim();
-    const [hour, minute] = startTime.split(':');
-    const start = new Date(b.date);
-    start.setHours(Number(hour), Number(minute || 0));
-    // End time: if range, use end; else, add 1 hour
-    let end = new Date(b.date);
-    if (b.time && b.time.includes('-')) {
-      const endTime = b.time.split('-')[1].trim();
-      const [eh, em] = endTime.split(':');
-      end.setHours(Number(eh), Number(em || 0));
-    } else {
-      end.setHours(Number(hour) + 1, Number(minute || 0));
+  // Handle booking actions from calendar
+  const handleEditBooking = (booking: Booking) => {
+    setSelectedEvent(booking);
+    setEditDate(booking.date);
+    setEditTime(booking.time);
+  };
+
+  const handleDeleteBooking = (booking: Booking) => {
+    if (confirm('Θέλετε σίγουρα να ακυρώσετε αυτή την κράτηση;')) {
+      handleCancelBooking(booking._id);
     }
-    return {
-      ...b,
-      title: b.name,
-      start,
-      end,
-      allDay: false,
-    };
-  });
+  };
 
   // When opening edit modal, initialize editDate/editTime
   useEffect(() => {
@@ -313,16 +295,132 @@ export default function AdminDashboardPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 text-black">
-      <header className="w-full flex justify-between items-center px-8 py-6 border-b border-gray-200 bg-white sticky top-0 z-10">
-        <h1 className="text-3xl font-extrabold tracking-tight">Admin Dashboard</h1>
-        <button onClick={handleLogout} className="bg-orange-200 hover:bg-orange-300 text-black font-bold px-5 py-2 rounded-lg transition text-base">Αποσύνδεση</button>
-      </header>
-      <section className="w-full max-w-6xl mx-auto py-8 px-4">
+      <Navbar1 
+        onLogout={handleLogout} 
+        onNewBooking={() => setShowBookingModal(true)} 
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+      <section className="w-full py-8 px-8">
         {message && <div className="mb-4 text-center text-green-700 font-bold text-lg">{message}</div>}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Κρατήσεις</h2>
-          <button onClick={() => setShowBookingModal(true)} className="bg-black text-white font-bold px-4 py-2 rounded-lg hover:bg-gray-800 transition">+ Νέα Κράτηση</button>
-        </div>
+        {/* Calendar Section */}
+        {activeTab === 'calendar' && (
+          <div className="mb-8">
+            <BookingCalendar 
+              bookings={bookings}
+              onEditBooking={handleEditBooking}
+              onDeleteBooking={handleDeleteBooking}
+            />
+          </div>
+        )}
+
+        {/* Schedule Section */}
+        {activeTab === 'schedule' && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800 px-4 sm:px-8">Διαχείριση Διαθεσιμότητας</h2>
+            <div className="bg-gray-100 border border-orange-200 rounded-lg p-4 sm:p-6 mb-6">
+              {/* Global Timeslot Management */}
+              <div className="mb-8">
+                <div className="mb-4 font-bold text-black text-lg">Default slots ανά ημέρα</div>
+                
+                {/* Weekday Selection - Mobile Responsive */}
+                <div className="mb-6">
+                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-4">
+                    {WEEKDAYS.map((d, i) => (
+                      <button
+                        key={d}
+                        className={`px-2 sm:px-3 py-2 sm:py-3 rounded-lg font-bold border transition text-sm sm:text-base ${selectedWeekday === i ? 'bg-orange-200 border-orange-400 text-black shadow-md' : 'bg-white border-gray-300 text-black hover:bg-gray-50'}`}
+                        onClick={() => setSelectedWeekday(i)}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Time Slots - Mobile Responsive */}
+                <div className="mb-6">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-4">
+                    {HOUR_SLOTS.map(time => (
+                      <button
+                        key={time}
+                        className={`px-2 py-3 rounded-lg border font-bold text-sm transition text-black min-h-[44px] ${selectedSlots.includes(time) ? 'bg-orange-200 border-orange-400 shadow-md' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                        onClick={() => toggleSlot(time)}
+                      >
+                        {time}
+                      </button>
+                    ))}
+                  </div>
+                  <button 
+                    onClick={handleSaveGlobalSlots} 
+                    className="w-full sm:w-auto bg-orange-200 hover:bg-orange-300 text-black font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg"
+                  >
+                    Αποθήκευση για {WEEKDAYS[selectedWeekday]}
+                  </button>
+                </div>
+              </div>
+
+              {/* Date-specific Overrides */}
+              <div className="border-t border-gray-300 pt-6">
+                <div className="mb-4 font-bold text-black text-lg">Overrides για συγκεκριμένη ημερομηνία</div>
+                
+                {/* Date Input - Mobile Responsive */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Επιλέξτε ημερομηνία:</label>
+                  <input 
+                    type="date" 
+                    value={overrideDate} 
+                    onChange={e => setOverrideDate(e.target.value)} 
+                    className="w-full sm:w-auto border border-gray-300 rounded-lg px-4 py-3 text-black focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition" 
+                  />
+                </div>
+
+                {overrideDate && (
+                  <>
+                    {overrideLoading ? (
+                      <div className="text-black text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400 mx-auto mb-2"></div>
+                        Φόρτωση...
+                      </div>
+                    ) : (
+                      <>
+                        {/* Override Time Slots - Mobile Responsive */}
+                        <div className="mb-6">
+                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-4">
+                            {HOUR_SLOTS.map(time => (
+                              <button
+                                key={time}
+                                className={`px-2 py-3 rounded-lg border font-bold text-sm transition text-black min-h-[44px] ${overrideSlots[time] ? 'bg-orange-200 border-orange-400 shadow-md' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                                onClick={() => toggleOverrideSlot(time)}
+                              >
+                                {time}
+                              </button>
+                            ))}
+                          </div>
+                          <button 
+                            onClick={handleSaveOverrides} 
+                            className="w-full sm:w-auto bg-orange-200 hover:bg-orange-300 text-black font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg"
+                          >
+                            Αποθήκευση για {overrideDate}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Overrides Section */}
+        {activeTab === 'overrides' && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800 px-8">Όλα τα Overrides</h2>
+            <OverridesTable />
+          </div>
+        )}
+
         {/* Booking Modal */}
         {showBookingModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -332,7 +430,19 @@ export default function AdminDashboardPage() {
               <form className="space-y-4" onSubmit={handleCreateBooking}>
                 <div>
                   <label className="block font-semibold mb-1">Υπηρεσία</label>
-                  <input type="text" className="w-full border rounded px-3 py-2" value={newBooking.service} onChange={e => setNewBooking({ ...newBooking, service: e.target.value })} required />
+                  <select 
+                    className="w-full border rounded px-3 py-2" 
+                    value={newBooking.service} 
+                    onChange={e => setNewBooking({ ...newBooking, service: e.target.value })} 
+                    required
+                  >
+                    <option value="">Επιλέξτε υπηρεσία</option>
+                    {SERVICES.map((service, index) => (
+                      <option key={index} value={service}>
+                        {service}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex gap-2">
                   <div className="flex-1">
@@ -341,7 +451,19 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="flex-1">
                     <label className="block font-semibold mb-1">Ώρα</label>
-                    <input type="text" className="w-full border rounded px-3 py-2" value={newBooking.time} onChange={e => setNewBooking({ ...newBooking, time: e.target.value })} required />
+                    <select 
+                      className="w-full border rounded px-3 py-2" 
+                      value={newBooking.time} 
+                      onChange={e => setNewBooking({ ...newBooking, time: e.target.value })} 
+                      required
+                    >
+                      <option value="">Επιλέξτε ώρα</option>
+                      {TIME_SLOTS.map((time, index) => (
+                        <option key={index} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div>
@@ -405,255 +527,83 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
-        <div className="mb-8 bg-white rounded-2xl shadow p-4">
-          <h2 className="text-2xl font-bold mb-4 text-black">Ημερολόγιο Κρατήσεων</h2>
-          <Calendar
-            localizer={localizer}
-            events={calendarEvents}
-            startAccessor="start"
-            endAccessor="end"
-            style={{ height: 600 }}
-            views={['month', 'week']}
-            defaultView="month"
-            popup
-            messages={{
-              month: 'Μήνας',
-              week: 'Εβδομάδα',
-              today: 'Σήμερα',
-              previous: 'Προηγούμενος',
-              next: 'Επόμενος',
-              showMore: (total: number) => `+${total} ακόμα`,
-            }}
-            min={new Date(1970, 1, 1, 9, 0, 0)}
-            max={new Date(1970, 1, 1, 21, 0, 0)}
-            timeslots={1}
-            step={60}
-            formats={{
-              timeGutterFormat: greekTimeLabel,
-            }}
-            eventPropGetter={() => ({ style: { background: '#FBDAC6', color: '#222', borderRadius: 8, border: 'none', fontWeight: 600 } })}
-            onSelectEvent={event => setSelectedEvent(event)}
-          />
-          {selectedEvent && (
+        {/* Edit Modal */}
+        {selectedEvent && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
               <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative">
                 <button className="absolute top-3 right-3 text-gray-400 hover:text-black text-2xl" onClick={() => setSelectedEvent(null)}>&times;</button>
-                <h3 className="text-xl font-bold mb-4">Λεπτομέρειες Κράτησης</h3>
-                <div className="space-y-2 text-black text-base">
-                  <div><span className="font-semibold">Όνομα:</span> {selectedEvent.name}</div>
-                  <div><span className="font-semibold">Υπηρεσία:</span> {selectedEvent.service}</div>
-                  <div><span className="font-semibold">Ημερομηνία:</span> {selectedEvent.date}</div>
-                  <div><span className="font-semibold">Ώρα:</span> {formatGreekTime(selectedEvent.time)}</div>
-                  <div><span className="font-semibold">Τηλέφωνο:</span> {selectedEvent.telephone}</div>
-                  <div><span className="font-semibold">Email:</span> {selectedEvent.email}</div>
-                </div>
-                <div className="flex gap-4 mt-6">
-                  <button
-                    className="bg-red-100 text-red-700 font-bold px-4 py-2 rounded hover:bg-red-200 transition"
-                    onClick={() => setSelectedEvent({ ...selectedEvent, confirm: 'cancel' })}
-                  >
-                    Ακύρωση
-                  </button>
-                  <button
-                    className="bg-orange-100 text-orange-700 font-bold px-4 py-2 rounded hover:bg-orange-200 transition"
-                    onClick={() => setSelectedEvent({ ...selectedEvent, confirm: 'edit' })}
-                  >
-                    Επεξεργασία
-                  </button>
-                </div>
-                {/* Confirmation Dialogs */}
-                {selectedEvent.confirm === 'cancel' && (
-                  <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
-                    <div className="bg-white rounded-xl shadow-lg p-6 max-w-xs w-full">
-                      <div className="mb-4 text-black font-bold">Είστε σίγουροι ότι θέλετε να ακυρώσετε αυτή την κράτηση;</div>
-                      <div className="flex gap-3 justify-end">
-                        <button className="px-4 py-2 rounded bg-gray-200" onClick={() => setSelectedEvent({ ...selectedEvent, confirm: undefined })}>Όχι</button>
-                        <button className="px-4 py-2 rounded bg-red-500 text-white" onClick={() => handleCancelBooking(selectedEvent._id)}>Ναι, ακύρωση</button>
-                      </div>
-                    </div>
+                <h3 className="text-xl font-bold mb-4">Επεξεργασία Κράτησης</h3>
+                <form
+                  className="space-y-3"
+                  onSubmit={async e => {
+                    e.preventDefault();
+                    if (!editDate || !editTime) return;
+                    setEditSaving(true);
+                    const res = await fetch(`/api/bookings-list?id=${selectedEvent._id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ date: editDate, time: editTime }),
+                    });
+                    const data = await res.json();
+                    setEditSaving(false);
+                    if (res.ok && data.success) {
+                      setSelectedEvent(null);
+                      setMessage('Η κράτηση ενημερώθηκε!');
+                      // Refresh bookings
+                      const res2 = await fetch('/api/bookings-list');
+                      const data2 = await res2.json();
+                      setBookings(Array.isArray(data2) ? data2 : []);
+                    } else {
+                      alert(data.error || 'Σφάλμα ενημέρωσης κράτησης.');
+                    }
+                  }}
+                >
+                  <div className="space-y-2 text-black text-base mb-4">
+                    <div><span className="font-semibold">Όνομα:</span> {selectedEvent.name}</div>
+                    <div><span className="font-semibold">Υπηρεσία:</span> {selectedEvent.service}</div>
+                    <div><span className="font-semibold">Τηλέφωνο:</span> {selectedEvent.telephone}</div>
+                    <div><span className="font-semibold">Email:</span> {selectedEvent.email}</div>
                   </div>
-                )}
-                {selectedEvent.confirm === 'edit' && (
-                  <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
-                    <div className="bg-white rounded-xl shadow-lg p-6 max-w-xs w-full">
-                      <div className="mb-4 text-black font-bold">Επεξεργασία κράτησης</div>
-                      <form
-                        className="space-y-3"
-                        onSubmit={async e => {
-                          e.preventDefault();
-                          if (!editDate || !editTime) return;
-                          setEditSaving(true);
-                          const res = await fetch(`/api/bookings-list?id=${selectedEvent._id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ date: editDate, time: editTime }),
-                          });
-                          const data = await res.json();
-                          setEditSaving(false);
-                          if (res.ok && data.success) {
-                            setSelectedEvent(null);
-                            setMessage('Η κράτηση ενημερώθηκε!');
-                            // Refresh bookings
-                            const res2 = await fetch('/api/bookings-list');
-                            const data2 = await res2.json();
-                            setBookings(Array.isArray(data2) ? data2 : []);
-                          } else {
-                            alert(data.error || 'Σφάλμα ενημέρωσης κράτησης.');
-                          }
-                        }}
-                      >
-                        <div>
-                          <label className="block font-semibold mb-1">Ημερομηνία</label>
-                          <input
-                            type="date"
-                            name="date"
-                            className="w-full border rounded px-3 py-2"
-                            value={editDate || ''}
-                            onChange={e => setEditDate(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block font-semibold mb-1">Ώρα</label>
-                          <input
-                            type="text"
-                            name="time"
-                            className="w-full border rounded px-3 py-2"
-                            value={editTime || ''}
-                            onChange={e => setEditTime(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="flex gap-3 justify-end mt-4">
-                          <button
-                            type="button"
-                            className="px-4 py-2 rounded bg-gray-200"
-                            onClick={() => setSelectedEvent({ ...selectedEvent, confirm: undefined })}
-                            disabled={editSaving}
-                          >Άκυρο</button>
-                          <button
-                            type="submit"
-                            className="px-4 py-2 rounded bg-orange-500 text-white font-bold"
-                            disabled={editSaving || !editDate || !editTime}
-                          >{editSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}</button>
-                        </div>
-                      </form>
-                    </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Ημερομηνία</label>
+                    <input
+                      type="date"
+                      name="date"
+                      className="w-full border rounded px-3 py-2"
+                      value={editDate || ''}
+                      onChange={e => setEditDate(e.target.value)}
+                      required
+                    />
                   </div>
-                )}
+                  <div>
+                    <label className="block font-semibold mb-1">Ώρα</label>
+                    <input
+                      type="text"
+                      name="time"
+                      className="w-full border rounded px-3 py-2"
+                      value={editTime || ''}
+                      onChange={e => setEditTime(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex gap-3 justify-end mt-4">
+                    <button
+                      type="button"
+                      className="px-4 py-2 rounded bg-gray-200"
+                      onClick={() => setSelectedEvent(null)}
+                      disabled={editSaving}
+                    >Άκυρο</button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded bg-orange-500 text-white font-bold"
+                      disabled={editSaving || !editDate || !editTime}
+                    >{editSaving ? 'Αποθήκευση...' : 'Αποθήκευση'}</button>
+                  </div>
+                </form>
               </div>
             </div>
           )}
-        </div>
-        <div className="overflow-x-auto rounded-2xl shadow border border-gray-200 bg-white">
-          {bookingsLoading ? (
-            <div className="p-8 text-center text-black">Φόρτωση...</div>
-          ) : bookingsError ? (
-            <div className="p-8 text-center text-red-600">{bookingsError}</div>
-          ) : bookings.length === 0 ? (
-            <div className="p-8 text-center text-black">Δεν υπάρχουν κρατήσεις.</div>
-          ) : (
-            <table className="w-full text-base border-separate border-spacing-y-2">
-              <thead className="sticky top-0 bg-white z-10">
-                <tr>
-                  <th className="py-3 px-2 text-left font-bold">Υπηρεσία</th>
-                  <th className="py-3 px-2 text-left font-bold">Ημερομηνία</th>
-                  <th className="py-3 px-2 text-left font-bold">Ώρα</th>
-                  <th className="py-3 px-2 text-left font-bold">Όνομα</th>
-                  <th className="py-3 px-2 text-left font-bold">Τηλέφωνο</th>
-                  <th className="py-3 px-2 text-left font-bold">Email</th>
-                  <th className="py-3 px-2 text-left font-bold">Ενέργεια</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookings
-                  .filter(b => {
-                    // Only show today and future bookings
-                    const today = new Date();
-                    today.setHours(0,0,0,0);
-                    const bookingDate = new Date(b.date);
-                    bookingDate.setHours(0,0,0,0);
-                    return bookingDate >= today;
-                  })
-                  .map((b, i) => (
-                    <tr key={b._id} className={i % 2 === 0 ? 'bg-gray-50 hover:bg-orange-50 transition' : 'bg-white hover:bg-orange-50 transition'}>
-                      <td className="py-2 px-2 rounded-l-xl">{b.service}</td>
-                      <td className="py-2 px-2">{b.date}</td>
-                      <td className="py-2 px-2">{formatGreekTime(b.time)}</td>
-                      <td className="py-2 px-2">{b.name}</td>
-                      <td className="py-2 px-2">{b.telephone}</td>
-                      <td className="py-2 px-2">{b.email}</td>
-                      <td className="py-2 px-2 rounded-r-xl">
-                        <button onClick={() => handleCancelBooking(b._id)} className="text-red-600 hover:underline font-bold">Ακύρωση</button>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          )}
-        </div>
       </section>
-      <div>
-        <h2 className="text-lg font-bold mb-2 text-black">Διαχείριση Διαθεσιμότητας</h2>
-        <div className="bg-gray-100 border border-orange-200 rounded p-4 mb-4">
-          {/* Global Timeslot Management */}
-          <div className="mb-6">
-            <div className="mb-2 font-bold text-black">Default slots ανά ημέρα</div>
-            <div className="flex gap-2 mb-4">
-              {WEEKDAYS.map((d, i) => (
-                <button
-                  key={d}
-                  className={`px-3 py-1 rounded font-bold border transition ${selectedWeekday === i ? 'bg-orange-200 border-orange-400 text-black' : 'bg-white border-gray-300 text-black'}`}
-                  onClick={() => setSelectedWeekday(i)}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
-              {HOUR_SLOTS.map(time => (
-                <button
-                  key={time}
-                  className={`px-2 py-2 rounded border font-bold text-sm transition text-black ${selectedSlots.includes(time) ? 'bg-orange-200 border-orange-400' : 'bg-white border-gray-300'}`}
-                  onClick={() => toggleSlot(time)}
-                >
-                  {time}
-                </button>
-              ))}
-            </div>
-            <button onClick={handleSaveGlobalSlots} className="bg-orange-200 hover:bg-orange-300 text-black font-bold px-4 py-2 rounded transition">Αποθήκευση για {WEEKDAYS[selectedWeekday]}</button>
-          </div>
-          {/* Date-specific Overrides */}
-          <div className="mb-6">
-            <div className="mb-2 font-bold text-black">Overrides για συγκεκριμένη ημερομηνία</div>
-            <input type="date" value={overrideDate} onChange={e => setOverrideDate(e.target.value)} className="border rounded px-2 py-1 text-black mb-2" />
-            {overrideDate && (
-              <>
-                {overrideLoading ? (
-                  <div className="text-black">Φόρτωση...</div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
-                      {HOUR_SLOTS.map(time => (
-                        <button
-                          key={time}
-                          className={`px-2 py-2 rounded border font-bold text-sm transition text-black ${overrideSlots[time] ? 'bg-orange-200 border-orange-400' : 'bg-white border-gray-300'}`}
-                          onClick={() => toggleOverrideSlot(time)}
-                        >
-                          {time}
-                        </button>
-                      ))}
-                    </div>
-                    <button onClick={handleSaveOverrides} className="bg-orange-200 hover:bg-orange-300 text-black font-bold px-4 py-2 rounded transition">Αποθήκευση για {overrideDate}</button>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-        {/* Overrides Table */}
-        <OverridesTable />
-      </div>
     </main>
   );
 }
@@ -694,7 +644,7 @@ function OverridesTable() {
   if (filteredOverrides.length === 0) return <div className="p-8 text-center text-black">Δεν υπάρχουν overrides.</div>;
   return (
     <div className="overflow-x-auto rounded-2xl shadow border border-gray-200 bg-white mt-8">
-      <h2 className="text-lg font-bold mb-2 text-black px-4 pt-4">Όλα τα Overrides</h2>
+      <h2 className="text-2xl font-bold mb-6 text-gray-800 px-8 pt-6">Όλα τα Overrides</h2>
       <table className="w-full text-base border-separate border-spacing-y-2">
         <thead className="sticky top-0 bg-white z-10">
           <tr>
