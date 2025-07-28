@@ -132,6 +132,7 @@ The above admin dashboard improvements have been implemented. Please review the 
 - **CONFIGURED**: Disabled all ESLint rules in eslint.config.mjs and .eslintrc.json for development flexibility
 - **ENHANCED**: Made telephone and email optional in admin booking modal with expandable contact fields section
 - **FIXED**: Updated API validation to make telephone and email truly optional, and handle email sending only when email is provided
+- **FIXED**: Downgraded Tailwind CSS from v4 to v3 to resolve lightningcss deployment issues on Vercel
 - **NEW**: Added time-based sorting for bookings (9:00 appears before 11:00-12:00)
 
 The interactive calendar is now live and working with the app's color scheme. The admin dashboard now has a much more modern and user-friendly interface for viewing and managing bookings.
