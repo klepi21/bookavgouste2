@@ -164,8 +164,8 @@ const BookingCalendar = React.forwardRef<
     for (let i = 0; i < 42; i++) {
       const dayNumber = currentDate.getDate();
       const isCurrentMonth = currentDate.getMonth() === month;
-      // Force today to be July 28th, 2025 for testing
-      const today = new Date(2025, 6, 28); // July 28th, 2025
+      // Use actual current date
+      const today = new Date();
       const isToday = currentDate.toDateString() === today.toDateString();
       
       // Find bookings for this date using local date comparison
@@ -228,8 +228,8 @@ const BookingCalendar = React.forwardRef<
   const days = generateCalendarDays();
   
   const sortedDays = React.useMemo(() => {
-    // Force today to be July 28th, 2025 for testing
-    const today = new Date(2025, 6, 28).toISOString().split('T')[0]; // July 28th, 2025
+    // Use actual current date
+    const today = new Date().toISOString().split('T')[0];
     
     // Filter out past dates (only show today and future)
     let filteredDays = days.filter(day => {
