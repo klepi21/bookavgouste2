@@ -170,7 +170,8 @@ const BookingCalendar = React.forwardRef<
       
       // Find bookings for this date using local date comparison
       const currentDateLocal = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
-      const dateString = currentDateLocal.toISOString().split('T')[0];
+      // Ensure we get the correct date string without timezone issues
+      const dateString = `${currentDateLocal.getFullYear()}-${String(currentDateLocal.getMonth() + 1).padStart(2, '0')}-${String(currentDateLocal.getDate()).padStart(2, '0')}`;
       const dayBookings = bookings.filter(b => {
         // Handle potential timezone issues by using local date comparison
         const bookingDate = new Date(b.date);
@@ -363,7 +364,10 @@ const BookingCalendar = React.forwardRef<
                                         <div className="flex w-full flex-col items-start justify-between">
                             <div className="flex items-center justify-between w-full">
                               <motion.h2 className="mb-2 text-4xl font-bold tracking-wider text-gray-800">
-                                {selectedDate ? `Κρατήσεις ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('el-GR', { day: 'numeric', month: 'long', year: 'numeric' })}` : 'Κρατήσεις'}
+                                {selectedDate ? `Κρατήσεις ${(() => {
+                                  const [year, month, day] = selectedDate.split('-').map(Number);
+                                  return new Date(year, month - 1, day).toLocaleDateString('el-GR', { day: 'numeric', month: 'long', year: 'numeric' });
+                                })()}` : 'Κρατήσεις'}
                               </motion.h2>
                               {selectedDate && (
                                 <button
@@ -377,7 +381,10 @@ const BookingCalendar = React.forwardRef<
                             </div>
                             <p className="font-medium text-gray-600">
                               {selectedDate 
-                                ? `Κρατήσεις για την ημερομηνία ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('el-GR', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                                ? `Κρατήσεις για την ημερομηνία ${(() => {
+                                  const [year, month, day] = selectedDate.split('-').map(Number);
+                                  return new Date(year, month - 1, day).toLocaleDateString('el-GR', { day: 'numeric', month: 'long', year: 'numeric' });
+                                })()}`
                                 : 'Δείτε τις σημερινές και επερχόμενες κρατήσεις.'
                               }
                             </p>

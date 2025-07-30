@@ -137,6 +137,7 @@ The above admin dashboard improvements have been implemented. Please review the 
 - **FIXED**: Updated globals.css to use Tailwind CSS v3 directives and resolved build errors
 - **FIXED**: Updated admin dashboard calendar to use real current date instead of hardcoded July 28th, 2025
 - **FIXED**: Fixed date display in admin calendar title by adding timezone handling to prevent date shifting
+- **ENHANCED**: Improved date string generation and parsing to eliminate timezone-related date shifting issues
 - **NEW**: Added time-based sorting for bookings (9:00 appears before 11:00-12:00)
 
 The interactive calendar is now live and working with the app's color scheme. The admin dashboard now has a much more modern and user-friendly interface for viewing and managing bookings.
