@@ -144,6 +144,17 @@ The above admin dashboard improvements have been implemented. Please review the 
   - **UI**: Added "Αποκλεισμοί" tab in admin navbar with add/remove functionality
   - **Validation**: Booking API now checks for blocked dates and prevents bookings
   - **Database**: New `blocked_dates` collection stores blocked date information
+- **NEW**: Added announcement system for admin panel and user interface
+  - **API**: Created `/api/announcements` endpoint for managing announcements
+  - **Admin UI**: Added "Ανακοινώσεις" tab with rich announcement creation interface
+  - **User Display**: Announcements appear prominently on user booking page
+  - **Types**: Support for info, warning, success, and error announcement types
+  - **Database**: New `announcements` collection with active/inactive status
+- **FIXED**: User interface now properly respects blocked dates
+  - **Filtering**: User date picker now excludes blocked dates
+  - **Error Handling**: Better error messages for blocked date attempts
+  - **Visual Feedback**: Shows message when all dates are blocked
+  - **Real-time**: Updates immediately when dates are blocked/unblocked
 
 The interactive calendar is now live and working with the app's color scheme. The admin dashboard now has a much more modern and user-friendly interface for viewing and managing bookings.
 

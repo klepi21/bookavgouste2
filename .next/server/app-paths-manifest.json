@@ -1,3 +1,9 @@
 {
-  "/page": "app/page.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/announcements/route": "app/api/announcements/route.js",
+  "/api/timeslots/route": "app/api/timeslots/route.js",
+  "/api/global-timeslots/route": "app/api/global-timeslots/route.js",
+  "/api/blocked-dates/route": "app/api/blocked-dates/route.js",
+  "/page": "app/page.js",
+  "/admin/dashboard/page": "app/admin/dashboard/page.js"
 }

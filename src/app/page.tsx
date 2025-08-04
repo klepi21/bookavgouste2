@@ -40,9 +40,43 @@ function UserBookingPageContent() {
   const [animatedIdx, setAnimatedIdx] = useState<number | null>(null);
   const bounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const [confirmationModal, setConfirmationModal] = useState(false);
+  const [announcement, setAnnouncement] = useState<any>(null);
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Fetch current announcement
+  useEffect(() => {
+    async function fetchAnnouncement() {
+      try {
+        const response = await fetch('/api/announcements');
+        if (response.ok) {
+          const data = await response.json();
+          setAnnouncement(data);
+        }
+      } catch (error) {
+        console.error('Error fetching announcement:', error);
+      }
+    }
+    fetchAnnouncement();
+  }, []);
+
+  // Fetch blocked dates
+  useEffect(() => {
+    async function fetchBlockedDates() {
+      try {
+        const response = await fetch('/api/blocked-dates?all=true');
+        if (response.ok) {
+          const data = await response.json();
+          setBlockedDates(data.map((item: any) => item.date));
+        }
+      } catch (error) {
+        console.error('Error fetching blocked dates:', error);
+      }
+    }
+    fetchBlockedDates();
   }, []);
 
   const days = useMemo(() => {
@@ -57,17 +91,21 @@ function UserBookingPageContent() {
       const dayOfWeek = date.getDay();
       // Skip Saturday (6) and Sunday (0)
       if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        days.push({
-          date,
-          label: date.toLocaleDateString('el-GR', { weekday: 'short', day: 'numeric', month: 'short' }),
-          value: date.toISOString().split('T')[0],
-        });
-        added++;
+        const dateString = date.toISOString().split('T')[0];
+        // Skip blocked dates
+        if (!blockedDates.includes(dateString)) {
+          days.push({
+            date,
+            label: date.toLocaleDateString('el-GR', { weekday: 'short', day: 'numeric', month: 'short' }),
+            value: dateString,
+          });
+          added++;
+        }
       }
       i++;
     }
     return days;
-  }, [mounted]);
+  }, [mounted, blockedDates]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -105,7 +143,12 @@ function UserBookingPageContent() {
           setConfirmationModal(true);
         }, 1200);
       } else {
-        setMessage(data.error || 'Σφάλμα κατά την αποθήκευση της κράτησης.');
+        // Handle specific blocked date error
+        if (data.error && data.error.includes('αποκλειστεί')) {
+          setMessage('Η επιλεγμένη ημερομηνία έχει αποκλειστεί για κρατήσεις. Παρακαλώ επιλέξτε άλλη ημερομηνία.');
+        } else {
+          setMessage(data.error || 'Σφάλμα κατά την αποθήκευση της κράτησης.');
+        }
       }
     } catch (err) {
       setMessage('Σφάλμα κατά την αποθήκευση της κράτησης.');
@@ -263,6 +306,30 @@ function UserBookingPageContent() {
             <div className="text-sm text-gray-700 text-center">Ανακάλυψε τα σημάδια που σου δείχνει το σώμα σου</div>
           </div>
         </div>
+
+        {/* Announcement Display */}
+        {announcement && (
+          <div style={{ position: 'relative', zIndex: 1 }} className="w-full max-w-md mb-4">
+            <div className={`px-4 py-3 rounded-lg border ${
+              announcement.type === 'info' ? 'bg-blue-50 border-blue-200' :
+              announcement.type === 'warning' ? 'bg-yellow-50 border-yellow-200' :
+              announcement.type === 'success' ? 'bg-green-50 border-green-200' :
+              'bg-red-50 border-red-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  announcement.type === 'info' ? 'bg-blue-500' :
+                  announcement.type === 'warning' ? 'bg-yellow-500' :
+                  announcement.type === 'success' ? 'bg-green-500' :
+                  'bg-red-500'
+                }`}></div>
+                <p className="text-sm text-gray-800 leading-relaxed">
+                  {announcement.message}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md flex flex-col gap-0 border-2" style={{ borderColor: '#B5C99A', position: 'relative', zIndex: 1 }}>
           {/* Service Selection as Cards */}
           <div className="mb-6">
@@ -301,21 +368,28 @@ function UserBookingPageContent() {
           <div className="mb-6">
             <label className="block mb-2 text-lg font-extrabold text-black">Ημερομηνία</label>
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {days.map((d) => (
-                <button
-                  key={d.value}
-                  type="button"
-                  className={`flex flex-col items-center px-3 py-2 rounded-lg border transition min-w-[70px] ${form.date === d.value ? 'bg-[#DFE7CA] border-[#DFE7CA]' : 'bg-gray-50 border-gray-200'}`}
-                  onClick={() => {
-                    setForm(f => ({ ...f, date: d.value, time: '' }));
-                    setRefreshKey(k => k + 1);
-                  }}
-                >
-                  <span className="font-bold text-black">{d.label.split(' ')[1]}</span>
-                  <span className="text-xs text-black font-semibold">{d.label.split(' ')[0]}</span>
-                  <span className="text-xs text-black font-semibold">{d.label.split(' ')[2]}</span>
-                </button>
-              ))}
+              {days.length === 0 ? (
+                <div className="w-full text-center py-4">
+                  <div className="text-red-600 font-bold mb-2">Δεν υπάρχουν διαθέσιμες ημερομηνίες</div>
+                  <div className="text-sm text-gray-600">Όλες οι ημερομηνίες έχουν αποκλειστεί για κρατήσεις</div>
+                </div>
+              ) : (
+                days.map((d) => (
+                  <button
+                    key={d.value}
+                    type="button"
+                    className={`flex flex-col items-center px-3 py-2 rounded-lg border transition min-w-[70px] ${form.date === d.value ? 'bg-[#DFE7CA] border-[#DFE7CA]' : 'bg-gray-50 border-gray-200'}`}
+                    onClick={() => {
+                      setForm(f => ({ ...f, date: d.value, time: '' }));
+                      setRefreshKey(k => k + 1);
+                    }}
+                  >
+                    <span className="font-bold text-black">{d.label.split(' ')[1]}</span>
+                    <span className="text-xs text-black font-semibold">{d.label.split(' ')[0]}</span>
+                    <span className="text-xs text-black font-semibold">{d.label.split(' ')[2]}</span>
+                  </button>
+                ))
+              )}
             </div>
           </div>
           <div className="border-b border-gray-200 my-4" />

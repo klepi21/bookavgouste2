@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import { Menu, X, LogOut, Plus, Calendar, Clock, Settings, Ban } from "lucide-react"
+import { Menu, X, LogOut, Plus, Calendar, Clock, Settings, Ban, Megaphone } from "lucide-react"
 import Image from "next/image"
 
 interface Navbar1Props {
@@ -79,6 +79,20 @@ const Navbar1 = ({ onLogout, onNewBooking, activeTab, onTabChange }: Navbar1Prop
             >
               <Ban className="w-4 h-4" />
               Αποκλεισμοί
+            </button>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            whileHover={{ scale: 1.05 }}
+          >
+            <button 
+              onClick={() => onTabChange?.('announcements')}
+              className={`text-sm transition-colors font-medium flex items-center gap-2 ${activeTab === 'announcements' ? 'text-orange-600' : 'text-gray-900 hover:text-gray-600'}`}
+            >
+              <Megaphone className="w-4 h-4" />
+              Ανακοινώσεις
             </button>
           </motion.div>
           <motion.div
@@ -195,6 +209,20 @@ const Navbar1 = ({ onLogout, onNewBooking, activeTab, onTabChange }: Navbar1Prop
                 >
                   <Ban className="w-4 h-4" />
                   Αποκλεισμοί
+                </button>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+                exit={{ opacity: 0, x: 20 }}
+              >
+                <button 
+                  onClick={() => { onTabChange?.('announcements'); toggleMenu(); }}
+                  className={`text-base font-medium flex items-center gap-2 ${activeTab === 'announcements' ? 'text-orange-600' : 'text-gray-900'}`}
+                >
+                  <Megaphone className="w-4 h-4" />
+                  Ανακοινώσεις
                 </button>
               </motion.div>
               <motion.div

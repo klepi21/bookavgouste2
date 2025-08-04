@@ -84,6 +84,10 @@ export default function AdminDashboardPage() {
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [newBlockedDate, setNewBlockedDate] = useState('');
   const [blockedDatesLoading, setBlockedDatesLoading] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
+  const [announcementType, setAnnouncementType] = useState('info');
+  const [currentAnnouncement, setCurrentAnnouncement] = useState<any>(null);
+  const [announcementLoading, setAnnouncementLoading] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [newBooking, setNewBooking] = useState({
     service: '',
@@ -129,6 +133,7 @@ export default function AdminDashboardPage() {
     }
     fetchBookings();
     fetchBlockedDates();
+    fetchCurrentAnnouncement();
   }, []);
 
   // Fetch timeslots
@@ -354,6 +359,64 @@ export default function AdminDashboardPage() {
     setBlockedDatesLoading(false);
   }
 
+  // Announcement functions
+  async function fetchCurrentAnnouncement() {
+    setAnnouncementLoading(true);
+    try {
+      const response = await fetch('/api/announcements');
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentAnnouncement(data);
+      }
+    } catch (error) {
+      console.error('Error fetching announcement:', error);
+    }
+    setAnnouncementLoading(false);
+  }
+
+  async function handlePostAnnouncement() {
+    if (!announcement.trim()) return;
+    
+    setAnnouncementLoading(true);
+    try {
+      const response = await fetch('/api/announcements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: announcement, type: announcementType })
+      });
+      if (response.ok) {
+        setAnnouncement('');
+        setAnnouncementType('info');
+        await fetchCurrentAnnouncement();
+        setMessage('Η ανακοίνωση δημοσιεύθηκε!');
+      } else {
+        const data = await response.json();
+        setMessage(data.error || 'Σφάλμα κατά τη δημοσίευση της ανακοίνωσης.');
+      }
+    } catch (error) {
+      setMessage('Σφάλμα κατά τη δημοσίευση της ανακοίνωσης.');
+    }
+    setAnnouncementLoading(false);
+  }
+
+  async function handleRemoveAnnouncement() {
+    setAnnouncementLoading(true);
+    try {
+      const response = await fetch('/api/announcements', {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        setCurrentAnnouncement(null);
+        setMessage('Η ανακοίνωση αφαιρέθηκε!');
+      } else {
+        setMessage('Σφάλμα κατά την αφαίρεση της ανακοίνωσης.');
+      }
+    } catch (error) {
+      setMessage('Σφάλμα κατά την αφαίρεση της ανακοίνωσης.');
+    }
+    setAnnouncementLoading(false);
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 text-black">
       <Navbar1 
@@ -552,6 +615,100 @@ export default function AdminDashboardPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Announcements Section */}
+        {activeTab === 'announcements' && (
+          <div className="mb-8 px-8">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800">Ανακοινώσεις</h2>
+            
+            {/* Current Announcement */}
+            {currentAnnouncement && (
+              <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Τρέχουσα Ανακοίνωση</h3>
+                  <button 
+                    onClick={handleRemoveAnnouncement}
+                    disabled={announcementLoading}
+                    className="text-red-500 hover:text-red-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Αφαίρεση
+                  </button>
+                </div>
+                <div className={`p-4 rounded-lg ${
+                  currentAnnouncement.type === 'info' ? 'bg-blue-50 border border-blue-200' :
+                  currentAnnouncement.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
+                  currentAnnouncement.type === 'success' ? 'bg-green-50 border border-green-200' :
+                  'bg-red-50 border border-red-200'
+                }`}>
+                  <p className="text-gray-800 font-medium">{currentAnnouncement.message}</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Δημοσιεύθηκε: {new Date(currentAnnouncement.createdAt).toLocaleDateString('el-GR', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Add New Announcement */}
+            <div className="p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">Νέα Ανακοίνωση</h3>
+              
+              <div className="space-y-4">
+                {/* Message Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Μήνυμα:</label>
+                  <textarea 
+                    value={announcement} 
+                    onChange={e => setAnnouncement(e.target.value)} 
+                    placeholder="π.χ. Θα κλείσουμε για διακοπές από 15-20 Αυγούστου"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition resize-none"
+                    rows={4}
+                  />
+                </div>
+
+                {/* Type Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Τύπος Ανακοίνωσης:</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { value: 'info', label: 'Πληροφορία', color: 'bg-blue-500' },
+                      { value: 'warning', label: 'Προειδοποίηση', color: 'bg-yellow-500' },
+                      { value: 'success', label: 'Επιτυχία', color: 'bg-green-500' },
+                      { value: 'error', label: 'Σφάλμα', color: 'bg-red-500' }
+                    ].map(type => (
+                      <button
+                        key={type.value}
+                        onClick={() => setAnnouncementType(type.value)}
+                        className={`flex items-center gap-2 p-3 rounded-lg border transition ${
+                          announcementType === type.value 
+                            ? 'border-gray-400 bg-gray-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className={`w-3 h-3 rounded-full ${type.color}`}></div>
+                        <span className="text-sm font-medium">{type.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <button 
+                  onClick={handlePostAnnouncement}
+                  disabled={!announcement.trim() || announcementLoading}
+                  className="w-full bg-orange-200 hover:bg-orange-300 disabled:bg-gray-400 text-black font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg disabled:cursor-not-allowed"
+                >
+                  {announcementLoading ? 'Δημοσίευση...' : 'Δημοσίευση Ανακοίνωσης'}
+                </button>
+              </div>
             </div>
           </div>
         )}
