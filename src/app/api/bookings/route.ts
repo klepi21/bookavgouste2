@@ -20,6 +20,14 @@ export async function POST(req: NextRequest) {
     const db = client.db();
     const bookings = db.collection('bookings');
 
+    // Check for blocked dates
+    const blockedDates = db.collection('blocked_dates');
+    const isBlocked = await blockedDates.findOne({ date });
+    if (isBlocked) {
+      await client.close();
+      return NextResponse.json({ error: 'Η ημερομηνία έχει αποκλειστεί για κρατήσεις.' }, { status: 403 });
+    }
+
     // Check for double booking (same date, time, service)
     const existing = await bookings.findOne({ date, time, service });
     if (existing) {

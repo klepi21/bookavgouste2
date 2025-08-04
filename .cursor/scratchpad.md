@@ -139,6 +139,11 @@ The above admin dashboard improvements have been implemented. Please review the 
 - **FIXED**: Fixed date display in admin calendar title by adding timezone handling to prevent date shifting
 - **ENHANCED**: Improved date string generation and parsing to eliminate timezone-related date shifting issues
 - **NEW**: Added time-based sorting for bookings (9:00 appears before 11:00-12:00)
+- **NEW**: Added comprehensive date blocking feature for admin panel
+  - **API**: Created `/api/blocked-dates` endpoint for managing blocked dates
+  - **UI**: Added "Αποκλεισμοί" tab in admin navbar with add/remove functionality
+  - **Validation**: Booking API now checks for blocked dates and prevents bookings
+  - **Database**: New `blocked_dates` collection stores blocked date information
 
 The interactive calendar is now live and working with the app's color scheme. The admin dashboard now has a much more modern and user-friendly interface for viewing and managing bookings.
 

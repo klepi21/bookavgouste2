@@ -81,6 +81,9 @@ export default function AdminDashboardPage() {
   const [overrideDate, setOverrideDate] = useState('');
   const [overrideSlots, setOverrideSlots] = useState<{ [time: string]: boolean }>({});
   const [overrideLoading, setOverrideLoading] = useState(false);
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const [newBlockedDate, setNewBlockedDate] = useState('');
+  const [blockedDatesLoading, setBlockedDatesLoading] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [newBooking, setNewBooking] = useState({
     service: '',
@@ -125,6 +128,7 @@ export default function AdminDashboardPage() {
       }
     }
     fetchBookings();
+    fetchBlockedDates();
   }, []);
 
   // Fetch timeslots
@@ -294,6 +298,62 @@ export default function AdminDashboardPage() {
     fetchPatients();
   }, [showBookingModal]);
 
+  // Blocked dates functions
+  async function fetchBlockedDates() {
+    setBlockedDatesLoading(true);
+    try {
+      const response = await fetch('/api/blocked-dates?all=true');
+      if (response.ok) {
+        const data = await response.json();
+        setBlockedDates(data.map((item: any) => item.date));
+      }
+    } catch (error) {
+      console.error('Error fetching blocked dates:', error);
+    }
+    setBlockedDatesLoading(false);
+  }
+
+  async function handleAddBlockedDate() {
+    if (!newBlockedDate) return;
+    
+    setBlockedDatesLoading(true);
+    try {
+      const response = await fetch('/api/blocked-dates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: newBlockedDate })
+      });
+      if (response.ok) {
+        setBlockedDates([...blockedDates, newBlockedDate]);
+        setNewBlockedDate('');
+        setMessage('Η ημερομηνία αποκλείστηκε!');
+      } else {
+        setMessage('Σφάλμα κατά την αποκλεισμό της ημερομηνίας.');
+      }
+    } catch (error) {
+      setMessage('Σφάλμα κατά την αποκλεισμό της ημερομηνίας.');
+    }
+    setBlockedDatesLoading(false);
+  }
+
+  async function handleRemoveBlockedDate(date: string) {
+    setBlockedDatesLoading(true);
+    try {
+      const response = await fetch(`/api/blocked-dates?date=${date}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        setBlockedDates(blockedDates.filter(d => d !== date));
+        setMessage('Η ημερομηνία ξεαποκλείστηκε!');
+      } else {
+        setMessage('Σφάλμα κατά την ξεαποκλεισμό της ημερομηνίας.');
+      }
+    } catch (error) {
+      setMessage('Σφάλμα κατά την ξεαποκλεισμό της ημερομηνίας.');
+    }
+    setBlockedDatesLoading(false);
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 text-black">
       <Navbar1 
@@ -419,6 +479,80 @@ export default function AdminDashboardPage() {
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-6 text-gray-800 px-8">Όλα τα Overrides</h2>
             <OverridesTable />
+          </div>
+        )}
+
+        {/* Blocked Dates Section */}
+        {activeTab === 'blocked' && (
+          <div className="mb-8 px-8">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800">Αποκλεισμένες Ημερομηνίες</h2>
+            
+            {/* Add New Blocked Date */}
+            <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">Προσθήκη Αποκλεισμένης Ημερομηνίας</h3>
+              <div className="flex flex-col sm:flex-row gap-4 items-end">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Ημερομηνία:</label>
+                  <input 
+                    type="date" 
+                    value={newBlockedDate} 
+                    onChange={e => setNewBlockedDate(e.target.value)} 
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition" 
+                  />
+                </div>
+                <button 
+                  onClick={handleAddBlockedDate}
+                  disabled={!newBlockedDate || blockedDatesLoading}
+                  className="bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg disabled:cursor-not-allowed"
+                >
+                  {blockedDatesLoading ? 'Προσθήκη...' : 'Αποκλεισμός'}
+                </button>
+              </div>
+            </div>
+
+            {/* List of Blocked Dates */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-800">Αποκλεισμένες Ημερομηνίες</h3>
+                <p className="text-sm text-gray-600 mt-1">Οι ημερομηνίες που έχουν αποκλειστεί για κρατήσεις</p>
+              </div>
+              
+              {blockedDatesLoading ? (
+                <div className="p-8 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400 mx-auto mb-2"></div>
+                  <p className="text-gray-600">Φόρτωση...</p>
+                </div>
+              ) : blockedDates.length === 0 ? (
+                <div className="p-8 text-center">
+                  <p className="text-gray-500">Δεν υπάρχουν αποκλεισμένες ημερομηνίες</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {blockedDates.sort().map((date, index) => (
+                    <div key={index} className="p-4 flex items-center justify-between hover:bg-gray-50">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
+                        <span className="font-medium text-gray-800">
+                          {new Date(date).toLocaleDateString('el-GR', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => handleRemoveBlockedDate(date)}
+                        disabled={blockedDatesLoading}
+                        className="text-red-500 hover:text-red-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Αφαίρεση
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
