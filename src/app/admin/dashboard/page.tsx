@@ -61,7 +61,7 @@ const DEFAULT_END_HOUR = 21;
 
 // Generate default time slots (45-minute intervals)
 const TIME_SLOTS = generateTimeSlots(DEFAULT_START_HOUR, DEFAULT_END_HOUR, SLOT_CONFIGS[DEFAULT_SLOT_CONFIG].interval);
-const HOUR_SLOTS = TIME_SLOTS; // Use the same dynamic slots
+const HOUR_SLOTS = TIME_SLOTS; // Use the same dynamic slotsg
 
 // Helper to convert a time string (e.g. '13:30') to Greek format
 function formatGreekTime(time: string): string {
@@ -145,7 +145,9 @@ export default function AdminDashboardPage() {
 
   // Function to get current time slots based on state
   const getCurrentTimeSlots = () => {
-    return generateTimeSlots(currentStartHour, currentEndHour, SLOT_CONFIGS[currentSlotConfig].interval);
+    const slots = generateTimeSlots(currentStartHour, currentEndHour, SLOT_CONFIGS[currentSlotConfig].interval);
+    console.log('getCurrentTimeSlots called:', { currentStartHour, currentEndHour, currentSlotConfig, slots });
+    return slots;
   };
 
   useEffect(() => {
@@ -219,6 +221,12 @@ export default function AdminDashboardPage() {
     setSelectedSlots(slots);
   }, [selectedWeekday, globalSlots]);
 
+  // Update selectedSlots when configuration changes
+  useEffect(() => {
+    // Clear selected slots when configuration changes, don't auto-select
+    setSelectedSlots([]);
+  }, [currentSlotConfig, currentStartHour, currentEndHour]);
+
   // Toggle slot
   function toggleSlot(time: string) {
     setSelectedSlots(slots =>
@@ -235,12 +243,95 @@ export default function AdminDashboardPage() {
   async function handleSaveGlobalSlots() {
     // Ensure correct weekday index (0=Sunday, 1=Monday, ..., 6=Saturday)
     const weekday = selectedWeekday;
+    
+    // Debug: Log what's being saved
+    console.log('Saving slots for weekday:', weekday);
+    console.log('Current configuration:', currentSlotConfig, currentStartHour, currentEndHour);
+    console.log('Selected slots to save:', selectedSlots);
+    
+    // Save ONLY the selected slots for this weekday
     await fetch('/api/global-timeslots', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekday, slots: selectedSlots.map(time => ({ time, service: '' })) }),
+      body: JSON.stringify({ 
+        weekday, 
+        slots: selectedSlots.map(time => ({ time, service: '' })) 
+      }),
     });
-    setMessage('Τα default slots αποθηκεύτηκαν!');
+    
+    // Refresh global slots to show the updated configuration
+    const res = await fetch('/api/global-timeslots');
+    const data = await res.json();
+    setGlobalSlots(Array.isArray(data) ? data : []);
+    
+    setMessage(`Αποθηκεύτηκαν ${selectedSlots.length} επιλεγμένα slots για ${WEEKDAYS[weekday]}!`);
+  }
+
+  // Apply current configuration to all weekdays
+  async function handleApplyToAllWeekdays() {
+    if (!confirm('Θέλετε να εφαρμόσετε την τρέχουσα ρύθμιση σε όλες τις ημέρες της εβδομάδας;')) {
+      return;
+    }
+    
+    if (selectedSlots.length === 0) {
+      setMessage('Παρακαλώ επιλέξτε πρώτα τα slots που θέλετε να εφαρμόσετε!');
+      return;
+    }
+    
+    setMessage('Εφαρμογή επιλεγμένων slots σε όλες τις ημέρες...');
+    
+    // Apply to all weekdays (0=Sunday, 1=Monday, ..., 6=Saturday)
+    for (let weekday = 0; weekday < 7; weekday++) {
+      // Skip weekends (Saturday=6, Sunday=0) if you want
+      if (weekday === 0 || weekday === 6) continue; // Skip weekends
+      
+      await fetch('/api/global-timeslots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          weekday, 
+          slots: selectedSlots.map(time => ({ time, service: '' })) 
+        }),
+      });
+    }
+    
+    // Refresh global slots to show the updated configuration
+    const res = await fetch('/api/global-timeslots');
+    const data = await res.json();
+    setGlobalSlots(Array.isArray(data) ? data : []);
+    
+    setMessage(`Εφαρμόστηκαν ${selectedSlots.length} επιλεγμένα slots σε όλες τις εργάσιμες ημέρες!`);
+  }
+
+  // Clear all time slots for all weekdays
+  async function handleClearAllSlots() {
+    if (!confirm('Θέλετε να διαγράψετε όλα τα time slots για όλες τις ημέρες; Αυτό θα αφαιρέσει όλες τις διαθεσιμότητες.')) {
+      return;
+    }
+    
+    setMessage('Διαγραφή όλων των time slots...');
+    
+    // Clear all weekdays (0=Sunday, 1=Monday, ..., 6=Saturday)
+    for (let weekday = 0; weekday < 7; weekday++) {
+      await fetch('/api/global-timeslots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          weekday, 
+          slots: [] // Empty array clears all slots
+        }),
+      });
+    }
+    
+    // Refresh global slots to show the updated configuration
+    const res = await fetch('/api/global-timeslots');
+    const data = await res.json();
+    setGlobalSlots(Array.isArray(data) ? data : []);
+    
+    // Clear selected slots
+    setSelectedSlots([]);
+    
+    setMessage('Όλα τα time slots διαγράφηκαν!');
   }
 
   // Save overrides
@@ -497,9 +588,7 @@ export default function AdminDashboardPage() {
                         onClick={() => {
                           // Update current configuration
                           setCurrentSlotConfig(key);
-                          // Regenerate time slots with new interval
-                          const newSlots = generateTimeSlots(currentStartHour, currentEndHour, config.interval);
-                          // Update the global state to reflect new slots
+                          // Clear selected slots when changing configuration
                           setSelectedSlots([]);
                           // Force re-render by updating a state variable
                           setRefreshKey(prev => prev + 1);
@@ -526,6 +615,23 @@ export default function AdminDashboardPage() {
                     (από {currentStartHour}:00 έως {currentEndHour}:00)
                   </div>
                   
+                  {/* Debug: Show generated slots */}
+                  <div className="mb-4 p-3 bg-gray-100 rounded-lg">
+                    <div className="text-sm font-semibold mb-2">Generated Slots Preview:</div>
+                    <div className="text-xs text-gray-600 mb-2">
+                      {getCurrentTimeSlots().slice(0, 5).join(', ')}...
+                    </div>
+                    <button
+                      onClick={() => {
+                        const allSlots = getCurrentTimeSlots();
+                        setSelectedSlots(allSlots);
+                      }}
+                      className="px-3 py-1 bg-green-200 hover:bg-green-300 text-black text-xs rounded transition"
+                    >
+                      Επιλογή Όλων (Select All)
+                    </button>
+                  </div>
+                  
                   {/* Business Hours Configuration */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -538,6 +644,8 @@ export default function AdminDashboardPage() {
                         onChange={(e) => {
                           const hour = parseInt(e.target.value);
                           setCurrentStartHour(hour);
+                          // Clear selected slots when changing hours
+                          setSelectedSlots([]);
                           setRefreshKey(prev => prev + 1);
                         }}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-black focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
@@ -553,6 +661,8 @@ export default function AdminDashboardPage() {
                         onChange={(e) => {
                           const hour = parseInt(e.target.value);
                           setCurrentEndHour(hour);
+                          // Clear selected slots when changing hours
+                          setSelectedSlots([]);
                           setRefreshKey(prev => prev + 1);
                         }}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-black focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
@@ -589,12 +699,26 @@ export default function AdminDashboardPage() {
                       </button>
                     ))}
                   </div>
-                  <button 
-                    onClick={handleSaveGlobalSlots} 
-                    className="w-full sm:w-auto bg-orange-200 hover:bg-orange-300 text-black font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg"
-                  >
-                    Αποθήκευση για {WEEKDAYS[selectedWeekday]}
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button 
+                      onClick={handleSaveGlobalSlots} 
+                      className="w-full sm:w-auto bg-orange-200 hover:bg-orange-300 text-black font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg"
+                    >
+                      Αποθήκευση για {WEEKDAYS[selectedWeekday]}
+                    </button>
+                    <button 
+                      onClick={handleApplyToAllWeekdays} 
+                      className="w-full sm:w-auto bg-blue-200 hover:bg-blue-300 text-black font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg"
+                    >
+                      Εφαρμογή σε Όλες τις Ημέρες
+                    </button>
+                    <button 
+                      onClick={handleClearAllSlots} 
+                      className="w-full sm:w-auto bg-red-200 hover:bg-red-300 text-black font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg"
+                    >
+                      Καθαρισμός Όλων
+                    </button>
+                  </div>
                 </div>
               </div>
 
