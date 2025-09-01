@@ -22,16 +22,46 @@ const SERVICES = [
   'Θεραπευτική Συνεδρία'
 ];
 
-// Generate time slots from 09:00 to 21:00 with 30-minute intervals
-const TIME_SLOTS = Array.from({ length: 25 }, (_, i) => {
-  const hour = Math.floor(i / 2) + 9;
-  const minute = (i % 2) * 30;
-  return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-});
-const HOUR_SLOTS = Array.from({ length: 13 }, (_, i) => {
-  const hour = 9 + i;
-  return `${hour.toString().padStart(2, '0')}:00 - ${(hour + 1).toString().padStart(2, '0')}:00`;
-});
+// Dynamic time slot generation system
+const generateTimeSlots = (startHour: number, endHour: number, intervalMinutes: number) => {
+  const slots = [];
+  const totalMinutes = (endHour - startHour) * 60;
+  const numSlots = Math.floor(totalMinutes / intervalMinutes);
+  
+  for (let i = 0; i < numSlots; i++) {
+    const totalMinutesFromStart = i * intervalMinutes;
+    const hour = startHour + Math.floor(totalMinutesFromStart / 60);
+    const minute = totalMinutesFromStart % 60;
+    const startTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    
+    // Calculate end time
+    const endTotalMinutes = totalMinutesFromStart + intervalMinutes;
+    const endHourCalc = startHour + Math.floor(endTotalMinutes / 60);
+    const endMinute = endTotalMinutes % 60;
+    const endTime = `${endHourCalc.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+    
+    slots.push(`${startTime} - ${endTime}`);
+  }
+  
+  return slots;
+};
+
+// Predefined slot configurations
+const SLOT_CONFIGS: Record<string, { label: string; interval: number }> = {
+  '30min': { label: '30 λεπτά', interval: 30 },
+  '45min': { label: '45 λεπτά', interval: 45 },
+  '1hour': { label: '1 ώρα', interval: 60 },
+  '90min': { label: '90 λεπτά', interval: 90 }
+};
+
+// Default to 45-minute slots
+const DEFAULT_SLOT_CONFIG = '45min';
+const DEFAULT_START_HOUR = 9;
+const DEFAULT_END_HOUR = 21;
+
+// Generate default time slots (45-minute intervals)
+const TIME_SLOTS = generateTimeSlots(DEFAULT_START_HOUR, DEFAULT_END_HOUR, SLOT_CONFIGS[DEFAULT_SLOT_CONFIG].interval);
+const HOUR_SLOTS = TIME_SLOTS; // Use the same dynamic slots
 
 // Helper to convert a time string (e.g. '13:30') to Greek format
 function formatGreekTime(time: string): string {
@@ -108,6 +138,15 @@ export default function AdminDashboardPage() {
   const [showNameDropdown, setShowNameDropdown] = useState(false);
   const [showContactFields, setShowContactFields] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar');
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [currentSlotConfig, setCurrentSlotConfig] = useState(DEFAULT_SLOT_CONFIG);
+  const [currentStartHour, setCurrentStartHour] = useState(DEFAULT_START_HOUR);
+  const [currentEndHour, setCurrentEndHour] = useState(DEFAULT_END_HOUR);
+
+  // Function to get current time slots based on state
+  const getCurrentTimeSlots = () => {
+    return generateTimeSlots(currentStartHour, currentEndHour, SLOT_CONFIGS[currentSlotConfig].interval);
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('adminSession') !== 'true') {
@@ -447,6 +486,81 @@ export default function AdminDashboardPage() {
               <div className="mb-8">
                 <div className="mb-4 font-bold text-black text-lg">Default slots ανά ημέρα</div>
                 
+                {/* Dynamic Time Slot Configuration */}
+                <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-800">Ρύθμιση Διαστήματος Ώρας</h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    {Object.entries(SLOT_CONFIGS).map(([key, config]) => (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          // Update current configuration
+                          setCurrentSlotConfig(key);
+                          // Regenerate time slots with new interval
+                          const newSlots = generateTimeSlots(currentStartHour, currentEndHour, config.interval);
+                          // Update the global state to reflect new slots
+                          setSelectedSlots([]);
+                          // Force re-render by updating a state variable
+                          setRefreshKey(prev => prev + 1);
+                        }}
+                        className={`p-3 rounded-lg border transition ${
+                          key === DEFAULT_SLOT_CONFIG 
+                            ? 'bg-orange-200 border-orange-400 text-black shadow-md' 
+                            : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <div className="font-bold text-sm">{config.label}</div>
+                        <div className="text-xs text-gray-600">
+                          {key === '45min' ? '9:00-9:45, 9:45-10:30...' :
+                           key === '30min' ? '9:00-9:30, 9:30-10:00...' :
+                           key === '1hour' ? '9:00-10:00, 10:00-11:00...' :
+                           '9:00-10:30, 10:30-12:00...'}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <div className="text-sm text-gray-600 mb-4">
+                    <strong>Τρέχουσα ρύθμιση:</strong> {SLOT_CONFIGS[currentSlotConfig].label} 
+                    (από {currentStartHour}:00 έως {currentEndHour}:00)
+                  </div>
+                  
+                  {/* Business Hours Configuration */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Έναρξη Εργασίας:</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="23"
+                        value={currentStartHour}
+                        onChange={(e) => {
+                          const hour = parseInt(e.target.value);
+                          setCurrentStartHour(hour);
+                          setRefreshKey(prev => prev + 1);
+                        }}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-black focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Λήξη Εργασίας:</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="23"
+                        value={currentEndHour}
+                        onChange={(e) => {
+                          const hour = parseInt(e.target.value);
+                          setCurrentEndHour(hour);
+                          setRefreshKey(prev => prev + 1);
+                        }}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-black focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
                 {/* Weekday Selection - Mobile Responsive */}
                 <div className="mb-6">
                   <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-4">
@@ -465,7 +579,7 @@ export default function AdminDashboardPage() {
                 {/* Time Slots - Mobile Responsive */}
                 <div className="mb-6">
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-4">
-                    {HOUR_SLOTS.map(time => (
+                    {getCurrentTimeSlots().map(time => (
                       <button
                         key={time}
                         className={`px-2 py-3 rounded-lg border font-bold text-sm transition text-black min-h-[44px] ${selectedSlots.includes(time) ? 'bg-orange-200 border-orange-400 shadow-md' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
@@ -510,8 +624,8 @@ export default function AdminDashboardPage() {
                       <>
                         {/* Override Time Slots - Mobile Responsive */}
                         <div className="mb-6">
-                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-4">
-                            {HOUR_SLOTS.map(time => (
+                                                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-4">
+                          {getCurrentTimeSlots().map(time => (
                               <button
                                 key={time}
                                 className={`px-2 py-3 rounded-lg border font-bold text-sm transition text-black min-h-[44px] ${overrideSlots[time] ? 'bg-orange-200 border-orange-400 shadow-md' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
