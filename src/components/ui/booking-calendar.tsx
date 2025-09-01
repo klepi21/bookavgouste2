@@ -136,8 +136,9 @@ const BookingCalendar = React.forwardRef<
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(() => {
-    // Set to 2025 to match the calendar display
-    return new Date(2025, 6, 1); // July 2025
+    // Use current date
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
   const handleDayHover = (day: string | null) => {
@@ -268,8 +269,9 @@ const BookingCalendar = React.forwardRef<
   };
 
   const goToToday = () => {
-    // Set to 2025 to match the calendar display
-    setCurrentMonth(new Date(2025, 6, 1)); // July 2025
+    // Go to current month
+    const now = new Date();
+    setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
   };
 
   return (
