@@ -339,7 +339,7 @@ function UserBookingPageContent() {
                 <button
                   key={service.label}
                   type="button"
-                  className={`flex flex-col items-start justify-center px-3 py-2 rounded-lg border transition min-w-[180px] h-[100px] ${form.service === service.label ? 'bg-[#DFE7CA] border-[#DFE7CA]' : 'bg-gray-50 border-gray-200'}`}
+                  className={`flex flex-col items-start justify-center px-3 py-1 rounded-lg border transition min-w-[180px] h-[68px] ${form.service === service.label ? 'bg-[#DFE7CA] border-[#DFE7CA]' : 'bg-gray-50 border-gray-200'}`}
                   onClick={() => {
                     setForm({ ...form, service: service.label });
                     setAnimatedIdx(idx);
@@ -347,18 +347,18 @@ function UserBookingPageContent() {
                     bounceTimeout.current = setTimeout(() => setAnimatedIdx(null), 2000);
                   }}
                 >
-                  <div className="flex items-center w-full h-[56px]">
+                  <div className="flex items-center w-full h-[36px]">
             <Image
                       src={`/${idx + 1}.png`}
                       alt="service"
-                      className={`h-16 w-16 object-contain mr-3 flex-shrink-0 transition-transform duration-300 ${animatedIdx === idx ? 'animate-bounce' : ''}`}
+                      className={`h-12 w-12 object-contain mr-3 flex-shrink-0 transition-transform duration-300 ${animatedIdx === idx ? 'animate-bounce' : ''}`}
                       style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.55))' }}
                       width={64}
                       height={64}
             />
                     <span className="text-black font-bold text-xs text-left flex-1 break-words leading-tight">{service.label}</span>
                   </div>
-                  <span className="text-xs text-black font-normal mt-1 ml-1 w-full truncate">{service.duration}</span>
+                  <span className="text-xs text-black font-normal mt-0.5 ml-1 w-full truncate">{service.duration}</span>
                 </button>
               ))}
             </div>
