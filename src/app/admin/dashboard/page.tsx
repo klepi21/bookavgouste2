@@ -571,7 +571,15 @@ export default function AdminDashboardPage() {
         {/* Schedule Section */}
         {activeTab === 'schedule' && (
           <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800 px-4 sm:px-8">Διαχείριση Διαθεσιμότητας</h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 px-4 sm:px-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4 sm:mb-0">Διαχείριση Διαθεσιμότητας</h2>
+          <a 
+            href="/admin/history" 
+            className="bg-gray-200 hover:bg-gray-300 text-black font-bold px-4 py-2 rounded-lg transition shadow-md hover:shadow-lg text-sm"
+          >
+            📊 Booking History
+          </a>
+        </div>
             <div className="bg-gray-100 border border-orange-200 rounded-lg p-4 sm:p-6 mb-6">
               {/* Global Timeslot Management */}
               <div className="mb-8">

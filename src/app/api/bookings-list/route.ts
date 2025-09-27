@@ -3,13 +3,42 @@ import { MongoClient, ObjectId } from 'mongodb';
 
 const uri = process.env.MONGODB_URI as string;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    
     const client = new MongoClient(uri);
     await client.connect();
     const db = client.db();
     const bookings = db.collection('bookings');
-    const all = await bookings.find({}).sort({ date: 1, time: 1 }).toArray();
+    
+    let query = {};
+    
+    // Add date range filter if provided
+    if (startDate && endDate) {
+      query = {
+        date: {
+          $gte: startDate,
+          $lte: endDate
+        }
+      };
+    } else if (startDate) {
+      query = {
+        date: {
+          $gte: startDate
+        }
+      };
+    } else if (endDate) {
+      query = {
+        date: {
+          $lte: endDate
+        }
+      };
+    }
+    
+    const all = await bookings.find(query).sort({ date: 1, time: 1 }).toArray();
     await client.close();
     return NextResponse.json(all);
   } catch {
