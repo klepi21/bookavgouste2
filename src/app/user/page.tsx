@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { UserIcon, PhoneIcon, EnvelopeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
+import { generateSlotsForDate, filterPastSlots, filterBookedSlots } from '@/lib/slotGenerator';
 
 const SERVICES = [
   { label: 'Απλή επίσκεψη', duration: '60 λεπτά' },
@@ -75,6 +76,28 @@ export default function UserBookingPage() {
     return getNext7Days();
   }, [mounted]);
 
+  // Auto-select first available date when days are loaded
+  useEffect(() => {
+    if (mounted && days.length > 0 && !form.date) {
+      // Find the first date that has available slots
+      const findFirstAvailableDate = async () => {
+        for (const day of days) {
+          try {
+            const slots = await generateSlotsForDate(day.value, form.service);
+            if (slots && slots.length > 0) {
+              setForm(f => ({ ...f, date: day.value }));
+              break;
+            }
+          } catch (error) {
+            // Error checking slots for date
+          }
+        }
+      };
+      
+      findFirstAvailableDate();
+    }
+  }, [mounted, days, form.date, form.service]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -134,7 +157,7 @@ export default function UserBookingPage() {
     fetchGlobalSlots();
   }, []);
 
-  // When date changes, instantly show possible slots for that weekday from preloaded globalSlots, then fetch overrides
+  // When date changes, generate slots using the new system
   useEffect(() => {
     if (!form.date) {
       setTimeslots(null);
@@ -142,49 +165,34 @@ export default function UserBookingPage() {
     }
     setTimeslotLoading(true);
     setTimeslotError(null);
-    // JS getDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
-    const weekday = new Date(form.date).getDay();
-    // Show global slots for this weekday instantly
-    const slots = globalSlots.filter((s) => Number(s.weekday) === Number(weekday)).map((s) => s.time);
-    setTimeslots((slots.length > 0 ? slots : []).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })));
-    // Now fetch date-specific overrides and update if needed
-    async function fetchOverrides() {
+    
+    async function fetchSlots() {
       try {
-        const overrideRes = await fetch(`/api/date-overrides?date=${form.date}`);
-        const overrideData = await overrideRes.json();
-        if (Array.isArray(overrideData) && overrideData.some((o: { available: boolean }) => o.available)) {
-          // Only show slots marked available
-          const available = overrideData.filter((o: { available: boolean }) => o.available).map((o: { time: string }) => o.time);
-          setTimeslots((available.length > 0 ? available : []).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })));
-        }
+        // Use the new slot generation system
+        const slots = await generateSlotsForDate(form.date, form.service);
+        setTimeslots(slots);
       } catch (err) {
         setTimeslotError('Σφάλμα κατά τη φόρτωση των διαθέσιμων ωρών.');
+        setTimeslots([]);
       } finally {
         setTimeslotLoading(false);
       }
     }
-    fetchOverrides();
-  }, [form.date, globalSlots, refreshKey]);
+    fetchSlots();
+  }, [form.date, form.service, refreshKey]);
 
-  // Filter out past slots if selected date is today
+  // Filter out past slots and booked slots
   const filteredTimeslots = useMemo(() => {
     if (!form.date || !timeslots) return timeslots;
-    const today = new Date();
-    const selected = new Date(form.date);
-    if (
-      today.getFullYear() === selected.getFullYear() &&
-      today.getMonth() === selected.getMonth() &&
-      today.getDate() === selected.getDate()
-    ) {
-      const nowMinutes = today.getHours() * 60 + today.getMinutes();
-      return timeslots.filter(t => {
-        const [h, m] = t.split(':');
-        const slotMinutes = parseInt(h) * 60 + parseInt(m);
-        return slotMinutes > nowMinutes;
-      });
-    }
-    return timeslots;
-  }, [form.date, timeslots]);
+    
+    // Filter out past slots if today
+    let filtered = filterPastSlots(timeslots, form.date);
+    
+    // Filter out booked slots
+    filtered = filterBookedSlots(filtered, bookedSlots);
+    
+    return filtered;
+  }, [form.date, timeslots, bookedSlots]);
 
   // Fetch booked slots for the selected date (ignore service)
   useEffect(() => {

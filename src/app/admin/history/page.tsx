@@ -140,9 +140,10 @@ export default function AdminHistoryPage() {
           localStorage.removeItem('adminSession');
           router.push('/admin/login');
         }} 
-        onNewBooking={() => {}} 
+        onNewBooking={() => router.push('/admin/dashboard')} 
         activeTab="history"
         onTabChange={() => {}}
+        onNavigateToHistory={() => {}}
       />
       
       <section className="w-full py-8 px-8">

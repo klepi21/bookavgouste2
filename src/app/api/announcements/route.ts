@@ -5,6 +5,11 @@ const uri = process.env.MONGODB_URI as string;
 
 export async function GET(req: NextRequest) {
   try {
+    if (!uri) {
+      console.error('MONGODB_URI is not defined');
+      return NextResponse.json({ error: 'Database configuration error' }, { status: 500 });
+    }
+
     const client = new MongoClient(uri);
     await client.connect();
     const db = client.db();
@@ -18,8 +23,12 @@ export async function GET(req: NextRequest) {
     
     await client.close();
     return NextResponse.json(result || null);
-  } catch {
-    return NextResponse.json({ error: 'Σφάλμα φόρτωσης ανακοίνωσης.' }, { status: 500 });
+  } catch (error) {
+    console.error('Error fetching announcements:', error);
+    return NextResponse.json({ 
+      error: 'Σφάλμα φόρτωσης ανακοίνωσης.', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 });
   }
 }
 

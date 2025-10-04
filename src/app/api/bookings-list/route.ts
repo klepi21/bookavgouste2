@@ -5,6 +5,11 @@ const uri = process.env.MONGODB_URI as string;
 
 export async function GET(req: NextRequest) {
   try {
+    if (!uri) {
+      console.error('MONGODB_URI is not defined');
+      return NextResponse.json({ error: 'Database configuration error' }, { status: 500 });
+    }
+
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -41,8 +46,12 @@ export async function GET(req: NextRequest) {
     const all = await bookings.find(query).sort({ date: 1, time: 1 }).toArray();
     await client.close();
     return NextResponse.json(all);
-  } catch {
-    return NextResponse.json({ error: 'Σφάλμα κατά τη φόρτωση των κρατήσεων.' }, { status: 500 });
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+    return NextResponse.json({ 
+      error: 'Σφάλμα κατά τη φόρτωση των κρατήσεων.', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 });
   }
 }
 

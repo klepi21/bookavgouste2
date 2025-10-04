@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BookingCalendar from '@/components/ui/booking-calendar';
+import SettingsPanel from '@/components/ui/settings-panel';
 
 import { Navbar1 } from '@/components/ui/navbar-1';
 
@@ -102,18 +103,7 @@ export default function AdminDashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [bookingsError, setBookingsError] = useState('');
-  const [timeslots, setTimeslots] = useState<Timeslot[]>([]);
-  const [newTimeslot, setNewTimeslot] = useState({ date: '', time: '', service: '' });
   const [message, setMessage] = useState('');
-  const [globalSlots, setGlobalSlots] = useState<{ weekday: number; time: string; service?: string }[]>([]);
-  const [selectedWeekday, setSelectedWeekday] = useState<number>(1); // Default to Monday
-  const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
-  const [overrideDate, setOverrideDate] = useState('');
-  const [overrideSlots, setOverrideSlots] = useState<{ [time: string]: boolean }>({});
-  const [overrideLoading, setOverrideLoading] = useState(false);
-  const [blockedDates, setBlockedDates] = useState<string[]>([]);
-  const [newBlockedDate, setNewBlockedDate] = useState('');
-  const [blockedDatesLoading, setBlockedDatesLoading] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const [announcementType, setAnnouncementType] = useState('info');
   const [currentAnnouncement, setCurrentAnnouncement] = useState<any>(null);
@@ -138,17 +128,6 @@ export default function AdminDashboardPage() {
   const [showNameDropdown, setShowNameDropdown] = useState(false);
   const [showContactFields, setShowContactFields] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar');
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [currentSlotConfig, setCurrentSlotConfig] = useState(DEFAULT_SLOT_CONFIG);
-  const [currentStartHour, setCurrentStartHour] = useState(DEFAULT_START_HOUR);
-  const [currentEndHour, setCurrentEndHour] = useState(DEFAULT_END_HOUR);
-
-  // Function to get current time slots based on state
-  const getCurrentTimeSlots = () => {
-    const slots = generateTimeSlots(currentStartHour, currentEndHour, SLOT_CONFIGS[currentSlotConfig].interval);
-    console.log('getCurrentTimeSlots called:', { currentStartHour, currentEndHour, currentSlotConfig, slots });
-    return slots;
-  };
 
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('adminSession') !== 'true') {
@@ -173,177 +152,11 @@ export default function AdminDashboardPage() {
       }
     }
     fetchBookings();
-    fetchBlockedDates();
     fetchCurrentAnnouncement();
   }, []);
 
-  // Fetch timeslots
-  useEffect(() => {
-    async function fetchTimeslots() {
-      const res = await fetch('/api/timeslots');
-      const data = await res.json();
-      if (Array.isArray(data)) setTimeslots(data);
-    }
-    fetchTimeslots();
-  }, [message]);
 
-  // Fetch global slots
-  useEffect(() => {
-    async function fetchGlobalSlots() {
-      const res = await fetch('/api/global-timeslots');
-      const data = await res.json();
-      setGlobalSlots(Array.isArray(data) ? data : []);
-    }
-    fetchGlobalSlots();
-  }, [message]);
 
-  // Fetch overrides for selected date
-  useEffect(() => {
-    if (!overrideDate) return setOverrideSlots({});
-    setOverrideLoading(true);
-    fetch(`/api/date-overrides?date=${overrideDate}`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          const slots: { [time: string]: boolean } = {};
-          data.forEach(o => { slots[o.time] = o.available; });
-          setOverrideSlots(slots);
-        } else {
-          setOverrideSlots({});
-        }
-      })
-      .finally(() => setOverrideLoading(false));
-  }, [overrideDate, message]);
-
-  // Update selectedSlots when weekday changes or globalSlots change
-  useEffect(() => {
-    const slots = globalSlots.filter(s => s.weekday === selectedWeekday).map(s => s.time);
-    setSelectedSlots(slots);
-  }, [selectedWeekday, globalSlots]);
-
-  // Update selectedSlots when configuration changes
-  useEffect(() => {
-    // Clear selected slots when configuration changes, don't auto-select
-    setSelectedSlots([]);
-  }, [currentSlotConfig, currentStartHour, currentEndHour]);
-
-  // Toggle slot
-  function toggleSlot(time: string) {
-    setSelectedSlots(slots =>
-      slots.includes(time) ? slots.filter(t => t !== time) : [...slots, time]
-    );
-  }
-
-  // Toggle override slot
-  function toggleOverrideSlot(time: string) {
-    setOverrideSlots(slots => ({ ...slots, [time]: !slots[time] }));
-  }
-
-  // Save slots for weekday
-  async function handleSaveGlobalSlots() {
-    // Ensure correct weekday index (0=Sunday, 1=Monday, ..., 6=Saturday)
-    const weekday = selectedWeekday;
-    
-    // Debug: Log what's being saved
-    console.log('Saving slots for weekday:', weekday);
-    console.log('Current configuration:', currentSlotConfig, currentStartHour, currentEndHour);
-    console.log('Selected slots to save:', selectedSlots);
-    
-    // Save ONLY the selected slots for this weekday
-    await fetch('/api/global-timeslots', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        weekday, 
-        slots: selectedSlots.map(time => ({ time, service: '' })) 
-      }),
-    });
-    
-    // Refresh global slots to show the updated configuration
-    const res = await fetch('/api/global-timeslots');
-    const data = await res.json();
-    setGlobalSlots(Array.isArray(data) ? data : []);
-    
-    setMessage(`Αποθηκεύτηκαν ${selectedSlots.length} επιλεγμένα slots για ${WEEKDAYS[weekday]}!`);
-  }
-
-  // Apply current configuration to all weekdays
-  async function handleApplyToAllWeekdays() {
-    if (!confirm('Θέλετε να εφαρμόσετε την τρέχουσα ρύθμιση σε όλες τις ημέρες της εβδομάδας;')) {
-      return;
-    }
-    
-    if (selectedSlots.length === 0) {
-      setMessage('Παρακαλώ επιλέξτε πρώτα τα slots που θέλετε να εφαρμόσετε!');
-      return;
-    }
-    
-    setMessage('Εφαρμογή επιλεγμένων slots σε όλες τις ημέρες...');
-    
-    // Apply to all weekdays (0=Sunday, 1=Monday, ..., 6=Saturday)
-    for (let weekday = 0; weekday < 7; weekday++) {
-      // Skip weekends (Saturday=6, Sunday=0) if you want
-      if (weekday === 0 || weekday === 6) continue; // Skip weekends
-      
-      await fetch('/api/global-timeslots', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          weekday, 
-          slots: selectedSlots.map(time => ({ time, service: '' })) 
-        }),
-      });
-    }
-    
-    // Refresh global slots to show the updated configuration
-    const res = await fetch('/api/global-timeslots');
-    const data = await res.json();
-    setGlobalSlots(Array.isArray(data) ? data : []);
-    
-    setMessage(`Εφαρμόστηκαν ${selectedSlots.length} επιλεγμένα slots σε όλες τις εργάσιμες ημέρες!`);
-  }
-
-  // Clear all time slots for all weekdays
-  async function handleClearAllSlots() {
-    if (!confirm('Θέλετε να διαγράψετε όλα τα time slots για όλες τις ημέρες; Αυτό θα αφαιρέσει όλες τις διαθεσιμότητες.')) {
-      return;
-    }
-    
-    setMessage('Διαγραφή όλων των time slots...');
-    
-    // Clear all weekdays (0=Sunday, 1=Monday, ..., 6=Saturday)
-    for (let weekday = 0; weekday < 7; weekday++) {
-      await fetch('/api/global-timeslots', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          weekday, 
-          slots: [] // Empty array clears all slots
-        }),
-      });
-    }
-    
-    // Refresh global slots to show the updated configuration
-    const res = await fetch('/api/global-timeslots');
-    const data = await res.json();
-    setGlobalSlots(Array.isArray(data) ? data : []);
-    
-    // Clear selected slots
-    setSelectedSlots([]);
-    
-    setMessage('Όλα τα time slots διαγράφηκαν!');
-  }
-
-  // Save overrides
-  async function handleSaveOverrides() {
-    const overrides = Object.entries(overrideSlots).map(([time, available]) => ({ time, service: '', available }));
-    await fetch('/api/date-overrides', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: overrideDate, overrides }),
-    });
-    setMessage('Τα overrides αποθηκεύτηκαν!');
-  }
 
   // Cancel booking
   async function handleCancelBooking(id: string) {
@@ -358,6 +171,11 @@ export default function AdminDashboardPage() {
   function handleLogout() {
     localStorage.removeItem('adminSession');
     router.push('/admin/login');
+  }
+
+  // Navigate to history page
+  function handleNavigateToHistory() {
+    router.push('/admin/history');
   }
 
   async function handleCreateBooking(e: any) {
@@ -433,61 +251,6 @@ export default function AdminDashboardPage() {
     fetchPatients();
   }, [showBookingModal]);
 
-  // Blocked dates functions
-  async function fetchBlockedDates() {
-    setBlockedDatesLoading(true);
-    try {
-      const response = await fetch('/api/blocked-dates?all=true');
-      if (response.ok) {
-        const data = await response.json();
-        setBlockedDates(data.map((item: any) => item.date));
-      }
-    } catch (error) {
-      console.error('Error fetching blocked dates:', error);
-    }
-    setBlockedDatesLoading(false);
-  }
-
-  async function handleAddBlockedDate() {
-    if (!newBlockedDate) return;
-    
-    setBlockedDatesLoading(true);
-    try {
-      const response = await fetch('/api/blocked-dates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: newBlockedDate })
-      });
-      if (response.ok) {
-        setBlockedDates([...blockedDates, newBlockedDate]);
-        setNewBlockedDate('');
-        setMessage('Η ημερομηνία αποκλείστηκε!');
-      } else {
-        setMessage('Σφάλμα κατά την αποκλεισμό της ημερομηνίας.');
-      }
-    } catch (error) {
-      setMessage('Σφάλμα κατά την αποκλεισμό της ημερομηνίας.');
-    }
-    setBlockedDatesLoading(false);
-  }
-
-  async function handleRemoveBlockedDate(date: string) {
-    setBlockedDatesLoading(true);
-    try {
-      const response = await fetch(`/api/blocked-dates?date=${date}`, {
-        method: 'DELETE'
-      });
-      if (response.ok) {
-        setBlockedDates(blockedDates.filter(d => d !== date));
-        setMessage('Η ημερομηνία ξεαποκλείστηκε!');
-      } else {
-        setMessage('Σφάλμα κατά την ξεαποκλεισμό της ημερομηνίας.');
-      }
-    } catch (error) {
-      setMessage('Σφάλμα κατά την ξεαποκλεισμό της ημερομηνίας.');
-    }
-    setBlockedDatesLoading(false);
-  }
 
   // Announcement functions
   async function fetchCurrentAnnouncement() {
@@ -554,6 +317,7 @@ export default function AdminDashboardPage() {
         onNewBooking={() => setShowBookingModal(true)} 
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        onNavigateToHistory={handleNavigateToHistory}
       />
       <section className="w-full py-8 px-8">
         {message && <div className="mb-4 text-center text-green-700 font-bold text-lg">{message}</div>}
@@ -568,302 +332,14 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* Schedule Section */}
-        {activeTab === 'schedule' && (
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 px-4 sm:px-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4 sm:mb-0">Διαχείριση Διαθεσιμότητας</h2>
-          <a 
-            href="/admin/history" 
-            className="bg-gray-200 hover:bg-gray-300 text-black font-bold px-4 py-2 rounded-lg transition shadow-md hover:shadow-lg text-sm"
-          >
-            📊 Booking History
-          </a>
-        </div>
-            <div className="bg-gray-100 border border-orange-200 rounded-lg p-4 sm:p-6 mb-6">
-              {/* Global Timeslot Management */}
-              <div className="mb-8">
-                <div className="mb-4 font-bold text-black text-lg">Default slots ανά ημέρα</div>
-                
-                {/* Dynamic Time Slot Configuration */}
-                <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-800">Ρύθμιση Διαστήματος Ώρας</h3>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    {Object.entries(SLOT_CONFIGS).map(([key, config]) => (
-                      <button
-                        key={key}
-                        onClick={() => {
-                          // Update current configuration
-                          setCurrentSlotConfig(key);
-                          // Clear selected slots when changing configuration
-                          setSelectedSlots([]);
-                          // Force re-render by updating a state variable
-                          setRefreshKey(prev => prev + 1);
-                        }}
-                        className={`p-3 rounded-lg border transition ${
-                          key === DEFAULT_SLOT_CONFIG 
-                            ? 'bg-orange-200 border-orange-400 text-black shadow-md' 
-                            : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        <div className="font-bold text-sm">{config.label}</div>
-                        <div className="text-xs text-gray-600">
-                          {key === '45min' ? '9:00-9:45, 9:45-10:30...' :
-                           key === '30min' ? '9:00-9:30, 9:30-10:00...' :
-                           key === '1hour' ? '9:00-10:00, 10:00-11:00...' :
-                           '9:00-10:30, 10:30-12:00...'}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  
-                  <div className="text-sm text-gray-600 mb-4">
-                    <strong>Τρέχουσα ρύθμιση:</strong> {SLOT_CONFIGS[currentSlotConfig].label} 
-                    (από {currentStartHour}:00 έως {currentEndHour}:00)
-                  </div>
-                  
-                  {/* Debug: Show generated slots */}
-                  <div className="mb-4 p-3 bg-gray-100 rounded-lg">
-                    <div className="text-sm font-semibold mb-2">Generated Slots Preview:</div>
-                    <div className="text-xs text-gray-600 mb-2">
-                      {getCurrentTimeSlots().slice(0, 5).join(', ')}...
-                    </div>
-                    <button
-                      onClick={() => {
-                        const allSlots = getCurrentTimeSlots();
-                        setSelectedSlots(allSlots);
-                      }}
-                      className="px-3 py-1 bg-green-200 hover:bg-green-300 text-black text-xs rounded transition"
-                    >
-                      Επιλογή Όλων (Select All)
-                    </button>
-                  </div>
-                  
-                  {/* Business Hours Configuration */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Έναρξη Εργασίας:</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="23"
-                        value={currentStartHour}
-                        onChange={(e) => {
-                          const hour = parseInt(e.target.value);
-                          setCurrentStartHour(hour);
-                          // Clear selected slots when changing hours
-                          setSelectedSlots([]);
-                          setRefreshKey(prev => prev + 1);
-                        }}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-black focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Λήξη Εργασίας:</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="23"
-                        value={currentEndHour}
-                        onChange={(e) => {
-                          const hour = parseInt(e.target.value);
-                          setCurrentEndHour(hour);
-                          // Clear selected slots when changing hours
-                          setSelectedSlots([]);
-                          setRefreshKey(prev => prev + 1);
-                        }}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-black focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Weekday Selection - Mobile Responsive */}
-                <div className="mb-6">
-                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-4">
-                    {WEEKDAYS.map((d, i) => (
-                      <button
-                        key={d}
-                        className={`px-2 sm:px-3 py-2 sm:py-3 rounded-lg font-bold border transition text-sm sm:text-base ${selectedWeekday === i ? 'bg-orange-200 border-orange-400 text-black shadow-md' : 'bg-white border-gray-300 text-black hover:bg-gray-50'}`}
-                        onClick={() => setSelectedWeekday(i)}
-                      >
-                        {d}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Time Slots - Mobile Responsive */}
-                <div className="mb-6">
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-4">
-                    {getCurrentTimeSlots().map(time => (
-                      <button
-                        key={time}
-                        className={`px-2 py-3 rounded-lg border font-bold text-sm transition text-black min-h-[44px] ${selectedSlots.includes(time) ? 'bg-orange-200 border-orange-400 shadow-md' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
-                        onClick={() => toggleSlot(time)}
-                      >
-                        {time}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button 
-                      onClick={handleSaveGlobalSlots} 
-                      className="w-full sm:w-auto bg-orange-200 hover:bg-orange-300 text-black font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg"
-                    >
-                      Αποθήκευση για {WEEKDAYS[selectedWeekday]}
-                    </button>
-                    <button 
-                      onClick={handleApplyToAllWeekdays} 
-                      className="w-full sm:w-auto bg-blue-200 hover:bg-blue-300 text-black font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg"
-                    >
-                      Εφαρμογή σε Όλες τις Ημέρες
-                    </button>
-                    <button 
-                      onClick={handleClearAllSlots} 
-                      className="w-full sm:w-auto bg-red-200 hover:bg-red-300 text-black font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg"
-                    >
-                      Καθαρισμός Όλων
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Date-specific Overrides */}
-              <div className="border-t border-gray-300 pt-6">
-                <div className="mb-4 font-bold text-black text-lg">Overrides για συγκεκριμένη ημερομηνία</div>
-                
-                {/* Date Input - Mobile Responsive */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Επιλέξτε ημερομηνία:</label>
-                  <input 
-                    type="date" 
-                    value={overrideDate} 
-                    onChange={e => setOverrideDate(e.target.value)} 
-                    className="w-full sm:w-auto border border-gray-300 rounded-lg px-4 py-3 text-black focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition" 
-                  />
-                </div>
-
-                {overrideDate && (
-                  <>
-                    {overrideLoading ? (
-                      <div className="text-black text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400 mx-auto mb-2"></div>
-                        Φόρτωση...
-                      </div>
-                    ) : (
-                      <>
-                        {/* Override Time Slots - Mobile Responsive */}
-                        <div className="mb-6">
-                                                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-4">
-                          {getCurrentTimeSlots().map(time => (
-                              <button
-                                key={time}
-                                className={`px-2 py-3 rounded-lg border font-bold text-sm transition text-black min-h-[44px] ${overrideSlots[time] ? 'bg-orange-200 border-orange-400 shadow-md' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
-                                onClick={() => toggleOverrideSlot(time)}
-                              >
-                                {time}
-                              </button>
-                            ))}
-                          </div>
-                          <button 
-                            onClick={handleSaveOverrides} 
-                            className="w-full sm:w-auto bg-orange-200 hover:bg-orange-300 text-black font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg"
-                          >
-                            Αποθήκευση για {overrideDate}
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Overrides Section */}
-        {activeTab === 'overrides' && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800 px-8">Όλα τα Overrides</h2>
-            <OverridesTable />
-          </div>
-        )}
-
-        {/* Blocked Dates Section */}
-        {activeTab === 'blocked' && (
+        {/* Settings Section */}
+        {activeTab === 'settings' && (
           <div className="mb-8 px-8">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800">Αποκλεισμένες Ημερομηνίες</h2>
-            
-            {/* Add New Blocked Date */}
-            <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">Προσθήκη Αποκλεισμένης Ημερομηνίας</h3>
-              <div className="flex flex-col sm:flex-row gap-4 items-end">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Ημερομηνία:</label>
-                  <input 
-                    type="date" 
-                    value={newBlockedDate} 
-                    onChange={e => setNewBlockedDate(e.target.value)} 
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition" 
-                  />
-                </div>
-                <button 
-                  onClick={handleAddBlockedDate}
-                  disabled={!newBlockedDate || blockedDatesLoading}
-                  className="bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white font-bold px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg disabled:cursor-not-allowed"
-                >
-                  {blockedDatesLoading ? 'Προσθήκη...' : 'Αποκλεισμός'}
-                </button>
-              </div>
-            </div>
-
-            {/* List of Blocked Dates */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-800">Αποκλεισμένες Ημερομηνίες</h3>
-                <p className="text-sm text-gray-600 mt-1">Οι ημερομηνίες που έχουν αποκλειστεί για κρατήσεις</p>
-              </div>
-              
-              {blockedDatesLoading ? (
-                <div className="p-8 text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400 mx-auto mb-2"></div>
-                  <p className="text-gray-600">Φόρτωση...</p>
-                </div>
-              ) : blockedDates.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-gray-500">Δεν υπάρχουν αποκλεισμένες ημερομηνίες</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-200">
-                  {blockedDates.sort().map((date, index) => (
-                    <div key={index} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
-                        <span className="font-medium text-gray-800">
-                          {new Date(date).toLocaleDateString('el-GR', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
-                        </span>
-                      </div>
-                      <button 
-                        onClick={() => handleRemoveBlockedDate(date)}
-                        disabled={blockedDatesLoading}
-                        className="text-red-500 hover:text-red-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Αφαίρεση
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <SettingsPanel />
           </div>
         )}
+
 
         {/* Announcements Section */}
         {activeTab === 'announcements' && (
@@ -958,6 +434,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
 
         {/* Booking Modal */}
         {showBookingModal && (
@@ -1170,62 +647,3 @@ export default function AdminDashboardPage() {
     </main>
   );
 }
-
-// Show all date-specific overrides in a table
-import { useEffect as useOverridesEffect, useState as useOverridesState } from 'react';
-function OverridesTable() {
-  const [overrides, setOverrides] = useOverridesState<any[]>([]);
-  const [loading, setLoading] = useOverridesState(true);
-  const [error, setError] = useOverridesState('');
-  useOverridesEffect(() => {
-    async function fetchOverrides() {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await fetch('/api/date-overrides?all=1');
-        const data = await res.json();
-        if (Array.isArray(data)) setOverrides(data);
-        else setError(data.error || 'Σφάλμα φόρτωσης overrides.');
-      } catch {
-        setError('Σφάλμα φόρτωσης overrides.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchOverrides();
-  }, []);
-  if (loading) return <div className="p-8 text-center text-black">Φόρτωση overrides...</div>;
-  if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
-  const filteredOverrides = overrides.filter(o => {
-    if (!o.date) return false;
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const overrideDate = new Date(o.date);
-    overrideDate.setHours(0,0,0,0);
-    return overrideDate >= today;
-  });
-  if (filteredOverrides.length === 0) return <div className="p-8 text-center text-black">Δεν υπάρχουν overrides.</div>;
-  return (
-    <div className="overflow-x-auto rounded-2xl shadow border border-gray-200 bg-white mt-8">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800 px-8 pt-6">Όλα τα Overrides</h2>
-      <table className="w-full text-base border-separate border-spacing-y-2">
-        <thead className="sticky top-0 bg-white z-10">
-          <tr>
-            <th className="py-3 px-2 text-left font-bold">Ημερομηνία</th>
-            <th className="py-3 px-2 text-left font-bold">Ώρα</th>
-            <th className="py-3 px-2 text-left font-bold">Διαθέσιμο</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredOverrides.map((o, i) => (
-            <tr key={o.date + o.time + i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-              <td className="py-2 px-2">{o.date}</td>
-              <td className="py-2 px-2">{o.time}</td>
-              <td className="py-2 px-2">{o.available ? 'Ναι' : 'Όχι'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-} 

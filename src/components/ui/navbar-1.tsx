@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import { Menu, X, LogOut, Plus, Calendar, Clock, Settings, Ban, Megaphone } from "lucide-react"
+import { Menu, X, LogOut, Plus, Calendar, Megaphone, Cog, List } from "lucide-react"
 import Image from "next/image"
 
 interface Navbar1Props {
@@ -11,9 +11,10 @@ interface Navbar1Props {
   onNewBooking: () => void;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  onNavigateToHistory?: () => void;
 }
 
-const Navbar1 = ({ onLogout, onNewBooking, activeTab, onTabChange }: Navbar1Props) => {
+const Navbar1 = ({ onLogout, onNewBooking, activeTab, onTabChange, onNavigateToHistory }: Navbar1Props) => {
   const [isOpen, setIsOpen] = useState(false)
 
   const toggleMenu = () => setIsOpen(!isOpen)
@@ -42,49 +43,21 @@ const Navbar1 = ({ onLogout, onNewBooking, activeTab, onTabChange }: Navbar1Prop
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-            whileHover={{ scale: 1.05 }}
-          >
-            <button 
-              onClick={() => onTabChange?.('schedule')}
-              className={`text-sm transition-colors font-medium flex items-center gap-2 ${activeTab === 'schedule' ? 'text-orange-600' : 'text-gray-900 hover:text-gray-600'}`}
-            >
-              <Clock className="w-4 h-4" />
-              Διαθεσιμότητα
-            </button>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-            whileHover={{ scale: 1.05 }}
-          >
-            <button 
-              onClick={() => onTabChange?.('overrides')}
-              className={`text-sm transition-colors font-medium flex items-center gap-2 ${activeTab === 'overrides' ? 'text-orange-600' : 'text-gray-900 hover:text-gray-600'}`}
-            >
-              <Settings className="w-4 h-4" />
-              Overrides
-            </button>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.25 }}
-            whileHover={{ scale: 1.05 }}
-          >
-            <button 
-              onClick={() => onTabChange?.('blocked')}
-              className={`text-sm transition-colors font-medium flex items-center gap-2 ${activeTab === 'blocked' ? 'text-orange-600' : 'text-gray-900 hover:text-gray-600'}`}
-            >
-              <Ban className="w-4 h-4" />
-              Αποκλεισμοί
-            </button>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
+            whileHover={{ scale: 1.05 }}
+          >
+            <button 
+              onClick={() => onTabChange?.('settings')}
+              className={`text-sm transition-colors font-medium flex items-center gap-2 ${activeTab === 'settings' ? 'text-orange-600' : 'text-gray-900 hover:text-gray-600'}`}
+            >
+              <Cog className="w-4 h-4" />
+              Ρυθμίσεις
+            </button>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.4 }}
             whileHover={{ scale: 1.05 }}
           >
             <button 
@@ -98,6 +71,20 @@ const Navbar1 = ({ onLogout, onNewBooking, activeTab, onTabChange }: Navbar1Prop
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.5 }}
+            whileHover={{ scale: 1.05 }}
+          >
+            <button 
+              onClick={onNavigateToHistory}
+              className="text-sm transition-colors font-medium flex items-center gap-2 text-gray-900 hover:text-gray-600"
+            >
+              <List className="w-4 h-4" />
+              Ραντεβού
+            </button>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
             whileHover={{ scale: 1.05 }}
           >
@@ -106,7 +93,7 @@ const Navbar1 = ({ onLogout, onNewBooking, activeTab, onTabChange }: Navbar1Prop
               className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Νέα Κράτηση
+              Κράτηση
             </button>
           </motion.div>
         </nav>
@@ -172,49 +159,21 @@ const Navbar1 = ({ onLogout, onNewBooking, activeTab, onTabChange }: Navbar1Prop
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                exit={{ opacity: 0, x: 20 }}
-              >
-                <button 
-                  onClick={() => { onTabChange?.('schedule'); toggleMenu(); }}
-                  className={`text-base font-medium flex items-center gap-2 ${activeTab === 'schedule' ? 'text-orange-600' : 'text-gray-900'}`}
-                >
-                  <Clock className="w-4 h-4" />
-                  Διαθεσιμότητα
-                </button>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                exit={{ opacity: 0, x: 20 }}
-              >
-                <button 
-                  onClick={() => { onTabChange?.('overrides'); toggleMenu(); }}
-                  className={`text-base font-medium flex items-center gap-2 ${activeTab === 'overrides' ? 'text-orange-600' : 'text-gray-900'}`}
-                >
-                  <Settings className="w-4 h-4" />
-                  Overrides
-                </button>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.35 }}
-                exit={{ opacity: 0, x: 20 }}
-              >
-                <button 
-                  onClick={() => { onTabChange?.('blocked'); toggleMenu(); }}
-                  className={`text-base font-medium flex items-center gap-2 ${activeTab === 'blocked' ? 'text-orange-600' : 'text-gray-900'}`}
-                >
-                  <Ban className="w-4 h-4" />
-                  Αποκλεισμοί
-                </button>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
+                exit={{ opacity: 0, x: 20 }}
+              >
+                <button 
+                  onClick={() => { onTabChange?.('settings'); toggleMenu(); }}
+                  className={`text-base font-medium flex items-center gap-2 ${activeTab === 'settings' ? 'text-orange-600' : 'text-gray-900'}`}
+                >
+                  <Cog className="w-4 h-4" />
+                  Ρυθμίσεις
+                </button>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 }}
                 exit={{ opacity: 0, x: 20 }}
               >
                 <button 
@@ -228,6 +187,20 @@ const Navbar1 = ({ onLogout, onNewBooking, activeTab, onTabChange }: Navbar1Prop
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6 }}
+                exit={{ opacity: 0, x: 20 }}
+              >
+                <button 
+                  onClick={() => { onNavigateToHistory?.(); toggleMenu(); }}
+                  className="text-base font-medium flex items-center gap-2 text-gray-900"
+                >
+                  <List className="w-4 h-4" />
+                  Ραντεβού
+                </button>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
                 exit={{ opacity: 0, x: 20 }}
               >
@@ -236,7 +209,7 @@ const Navbar1 = ({ onLogout, onNewBooking, activeTab, onTabChange }: Navbar1Prop
                   className="text-base text-gray-900 font-medium flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  Νέα Κράτηση
+                  Κράτηση
                 </button>
               </motion.div>
 
